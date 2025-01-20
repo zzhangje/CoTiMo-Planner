@@ -1,5 +1,26 @@
+# Cyber Planner 2025 ROS Version
+
+[![Next-Innovation](https://img.shields.io/badge/Next-Innovation-blueviolet?style=flat)](https://github.com/FRCNextInnovation) [![Lang](https://img.shields.io/badge/Lang-en--US-Green?style=flat)]()
+
+Team 8214's 2025 FRC season code for superstructure motion planning, written in ROS
+
+<img src="./assets/next-innovation.png" style="zoom:50%;" >
+
+## Quick Start
+
+```bash
+# Host
+chmod 777 start_dev.sh
+bash start_dev.sh
+```
+
+```bash
+# Docker
+bash quick_run.sh
+```
+
+## See Also
+
+1. Z. Zirui, CoTiMo. (2024). [Online]. Available: https://github.com/ZhangzrJerry/CoTiMo
+1. W. Zhepei, LBFGS-Lite. (2021). [Online]. Available: https://github.com/ZJU-FAST-Lab/LBFGS-Lite
 1. D. Verscheure, B. Demeulenaere, J. Swevers, J. De Schutter, and M. Diehl, “Time-Optimal Path Tracking for Robots: A Convex Optimization Approach,” IEEE Trans. Automat. Contr., vol. 54, no. 10, pp. 2318–2327, Oct. 2009, doi: 10.1109/TAC.2009.2028959.
-2. D.-H. Li and M. Fukushima, “On the Global Convergence of the BFGS Method for Nonconvex Unconstrained Optimization Problems,” SIAM J. Optim., vol. 11, no. 4, pp. 1054–1064, Jan. 2001, doi: 10.1137/S1052623499354242.
-3. D. C. Liu and J. Nocedal, “On the limited memory BFGS method for large scale optimization,” Mathematical Programming, vol. 45, no. 1–3, pp. 503–528, Aug. 1989, doi: 10.1007/BF01589116.
-4. W. Zhepei, LBFGS-Lite. (2021). [Online]. Available: https://github.com/ZJU-FAST-Lab/LBFGS-Lite
-5. F. Alizadeh and D. Goldfarb, “Second-order cone programming,” Mathematical Programming, vol. 95, no. 1, pp. 3–51, Jan. 2003, doi: 10.1007/s10107-002-0339-5.
