@@ -6,10 +6,14 @@
 namespace config {
 
 // dynamic params
-const double ELEVATOR_MAX_VEL = .1;
-const double ELEVATOR_MAX_ACC = .1;
-const double ARM_MAX_OMEGA = .2;
-const double ARM_MAX_ALPHA = .2;
+const double DT = .05;
+const double ELEVATOR_VMAX = .1;
+const double ARM_VMAX = .1;
+const double ELEVATOR_AMAX = .1;
+const double ARM_AMAX = .1;
+const double TOPP_GAMMA = .5;
+const double TOPP_BETA = 1e3;
+const int TOPP_ITER = 300;
 
 const double ROBOT_WIDTH = .7;
 const double ROBOT_HEIGHT = .2;
@@ -36,15 +40,6 @@ const double ARM_MAX_THETA_RADIAN = ARM_MAX_THETA_ROTATION / 180 * M_PI;
 const double ARM_GRID_SIZE = .1;
 const int ARM_GRID_NUMS =
     floor((ARM_MAX_THETA_RADIAN - ARM_MIN_THETA_RADIAN) / ARM_GRID_SIZE) + 1;
-
-const double DT = .05;
-const double ELEVATOR_VMAX = .1;
-const double ARM_VMAX = .1;
-const double ELEVATOR_AMAX = .1;
-const double ARM_AMAX = .1;
-const double TOPP_GAMMA = .5;
-const double TOPP_BETA = 1e3;
-const int TOPP_ITER = 30;
 
 // static params
 const double L1_FRONT_HEIGHT = .454;
