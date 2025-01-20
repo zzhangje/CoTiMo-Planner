@@ -34,6 +34,20 @@ int main(int argc, char** argv) {
   double end_t = atof(argv[5]);
   double end_r = atof(argv[6]);
 
+  ROS_INFO(
+      "\n"
+      "  ______   ______  _____ ____  \n"
+      " / ___\\ \\ / / __ )| ____|  _ \\ \n"
+      "| |    \\ V /|  _ \\|  _| | |_) |\n"
+      "| |___  | | | |_) | |___|  _ < \n"
+      " \\____| |_| |____/|_____|_| \\_\\\n"
+      " ____  _        _    _   _ _   _ _____ ____  \n"
+      "|  _ \\| |      / \\  | \\ | | \\ | | ____|  _ \\\n"
+      "| |_) | |     / _ \\ |  \\| |  \\| |  _| | |_) |\n"
+      "|  __/| |___ / ___ \\| |\\  | |\\  | |___|  _ < \n"
+      "|_|   |_____/_/   \\_\\_| \\_|_| \\_|_____|_| \\_\\"
+      " by @frcnextinnovation\n");
+
   // publishers & subscribers
   ros::Publisher cspace_pub =
       nh.advertise<nav_msgs::GridCells>("/cyber_planner/cspace", 10);
@@ -45,6 +59,8 @@ int main(int argc, char** argv) {
       nh.advertise<visualization_msgs::Marker>("/cyber_planner/points", 10);
   ros::Publisher path_pub =
       nh.advertise<visualization_msgs::Marker>("/cyber_planner/path", 10);
+  ros::Publisher waypoints_pub =
+      nh.advertise<visualization_msgs::Marker>("/cyber_planner/waypoints", 10);
   ros::Publisher plot_at_pub =
       nh.advertise<std_msgs::Float64MultiArray>("/path/plot/at", 10);
   ros::Publisher plot_ax_pub =
@@ -68,11 +84,15 @@ int main(int argc, char** argv) {
   getGridMap(env, arm_espace, map_espace);
   getGridMap(env, arm_cspace, map_cspace);
 
+  std::vector<std::vector<double>> emap, cmap;
+  getGridMap(env, arm_espace, emap);
+  getGridMap(env, arm_cspace, cmap);
+
   nav_msgs::GridCells cspace_msg, espace_msg, bound_msg;
   visualization_msgs::Marker points_msg;
 
-  renderMap(espace_msg, map_espace, 0);
-  renderMap(cspace_msg, map_cspace, -1);
+  renderMap(espace_msg, emap, 0);
+  renderMap(cspace_msg, cmap, -1);
   renderPoints(points_msg, std::vector<Eigen::Vector2d>{{begin_t, begin_r},
                                                         {end_t, end_r}});
   renderBound(bound_msg);
@@ -82,18 +102,20 @@ int main(int argc, char** argv) {
   ROS_INFO("grid map initialized, begin: (%d, %d), end: (%d, %d)", begin_idx(0),
            begin_idx(1), end_idx(0), end_idx(1));
 
-  std::vector<Eigen::Vector2i> path, visited;
-  bool found = astar::astar(map_espace, begin_idx, end_idx, path, visited);
+  std::vector<Eigen::Vector2i> path, visited, sampled_path;
+  bool found = astar::astar(emap, begin_idx, end_idx, path, visited);
   if (!found) {
     ROS_WARN("no path found in espace, try cspace");
     if (!astar::astar(map_cspace, begin_idx, end_idx, path, visited)) {
       ROS_ERROR("no path found");
-      return 0;
+      return -1;
     }
   }
 
-  visualization_msgs::Marker path_msg;
+  astar::samplePath(path, sampled_path, 3);
+  visualization_msgs::Marker path_msg, waypoints_msg;
   renderPath(path_msg, getTRs(path));
+  renderPath(waypoints_msg, getTRs(sampled_path));
   ROS_INFO("path found");
 
   Topp topp(getTRs(path));
@@ -137,6 +159,7 @@ int main(int argc, char** argv) {
     bound_pub.publish(bound_msg);
     points_pub.publish(points_msg);
     path_pub.publish(path_msg);
+    waypoints_pub.publish(waypoints_msg);
     plot_at_pub.publish(plot_at_msg);
     plot_ax_pub.publish(plot_ax_msg);
     plot_ay_pub.publish(plot_ay_msg);

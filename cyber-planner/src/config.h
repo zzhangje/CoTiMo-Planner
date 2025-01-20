@@ -7,13 +7,18 @@ namespace config {
 
 // dynamic params
 const double DT = .05;
-const double ELEVATOR_VMAX = .1;
-const double ARM_VMAX = .1;
-const double ELEVATOR_AMAX = .1;
-const double ARM_AMAX = .1;
 const double TOPP_GAMMA = .5;
 const double TOPP_BETA = 1e3;
-const int TOPP_ITER = 300;
+const int TOPP_ITER = 3;
+
+const double OBSTACLE_OFFSET = 100;
+const double OBSTACLE_FIELD_REDUCTION = .6;
+const double ASTAR_HEURISTIC_COEFFICIENT = 1;
+
+const double ARM_MAX_RPS = 2 * M_PI;
+const double ELEVATOR_MAX_RPS = 2 * M_PI;
+const double ARM_MAX_RPSS = .01;
+const double ELEVATOR_MAX_RPSS = .01;
 
 const double ROBOT_WIDTH = .7;
 const double ROBOT_HEIGHT = .2;
@@ -32,6 +37,12 @@ const int ELEVATOR_GRID_NUMS =
     floor((ELEVATOR_MAX_POSITION - ELEVATOR_MIN_POSITION) /
           ELEVATOR_GRID_SIZE) +
     1;
+const double ELEVATOR_REDUCTION = 1.;
+const double ELEVATOR_ROTATION_2_POSITION = 1. / 2 / M_PI;
+const double ELEVATOR_VMAX =
+    ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
+const double ELEVATOR_AMAX =
+    ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
 
 const double ARM_MIN_THETA_ROTATION = 0;
 const double ARM_MAX_THETA_ROTATION = 350;
@@ -40,6 +51,9 @@ const double ARM_MAX_THETA_RADIAN = ARM_MAX_THETA_ROTATION / 180 * M_PI;
 const double ARM_GRID_SIZE = .1;
 const int ARM_GRID_NUMS =
     floor((ARM_MAX_THETA_RADIAN - ARM_MIN_THETA_RADIAN) / ARM_GRID_SIZE) + 1;
+const double ARM_REDUCTION = 1.;
+const double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION;
+const double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION;
 
 // static params
 const double L1_FRONT_HEIGHT = .454;

@@ -13,16 +13,10 @@
 #include "object.hpp"
 
 double clamp(double x, double min, double max) {
-  if (x < min) return min;
-  if (x > max) return max;
-  return x;
+  return std::min(std::max(x, min), max);
 }
 
-int clamp(int x, int min, int max) {
-  if (x <= min) return min;
-  if (x >= max) return max;
-  return x;
-}
+int clamp(int x, int min, int max) { return std::min(std::max(x, min), max); }
 
 Eigen::Vector2i getGridIdx(const double t, const double r) {
   return Eigen::Vector2i(floor((clamp(t, config::ELEVATOR_MIN_POSITION,
@@ -82,6 +76,55 @@ void getGridMap(Object& env, Object& arm, std::vector<std::vector<bool>>& map) {
   return;
 }
 
+void getGridMap(Object& env, Object& arm,
+                std::vector<std::vector<double>>& map) {
+  map = std::vector<std::vector<double>>(
+      config::ELEVATOR_GRID_NUMS,
+      std::vector<double>(config::ARM_GRID_NUMS, true));
+  const double obstacle = config::OBSTACLE_OFFSET;
+  const double reduce = config::OBSTACLE_FIELD_REDUCTION;
+  // bound of the map
+  for (int tt = 0; tt < config::ELEVATOR_GRID_NUMS; ++tt) {
+    map[tt][0] = obstacle * reduce;
+    map[tt][config::ARM_GRID_NUMS - 1] = obstacle * reduce;
+  }
+  for (int rr = 0; rr < config::ARM_GRID_NUMS; ++rr) {
+    map[0][rr] = obstacle * reduce;
+    map[config::ELEVATOR_GRID_NUMS - 1][rr] = obstacle * reduce;
+  }
+  for (int tt = 1; tt < config::ELEVATOR_GRID_NUMS - 1; ++tt) {
+    for (int rr = 1; rr < config::ARM_GRID_NUMS - 1; ++rr) {
+      Object arm_copy = Object(arm);
+      Eigen::Vector2d tr = getTR(tt, rr);
+      arm_copy.armTransform(tr[0], tr[1]);
+      if (arm_copy.intersect(env)) {
+        map[tt][rr] = obstacle;
+      } else {
+        map[tt][rr] = std::max(map[tt - 1][rr - 1],
+                               std::max(map[tt - 1][rr], map[tt][rr - 1])) *
+                      reduce;
+      }
+    }
+  }
+  for (int tt = config::ELEVATOR_GRID_NUMS - 2; tt > 0; --tt) {
+    for (int rr = config::ARM_GRID_NUMS - 2; rr > 0; --rr) {
+      if (map[tt][rr] == obstacle) continue;
+      map[tt][rr] = std::max(
+          map[tt][rr], std::max(map[tt + 1][rr + 1],
+                                std::max(map[tt + 1][rr], map[tt][rr + 1])) *
+                           reduce);
+    }
+  }
+  for (int tt = 0; tt < config::ELEVATOR_GRID_NUMS; ++tt) {
+    for (int rr = 0; rr < config::ARM_GRID_NUMS; ++rr) {
+      if (map[tt][rr] < 1) {
+        map[tt][rr] = 0;
+      }
+    }
+  }
+  return;
+}
+
 void renderMap(nav_msgs::GridCells& map_msg,
                const std::vector<std::vector<bool>>& map,
                const double height = 0) {
@@ -91,6 +134,27 @@ void renderMap(nav_msgs::GridCells& map_msg,
   for (int i = 0; i < config::ELEVATOR_GRID_NUMS; ++i) {
     for (int j = 0; j < config::ARM_GRID_NUMS; ++j) {
       if (!map[i][j]) {
+        // mark if obstacle
+        geometry_msgs::Point p;
+        p.x = getTR(i, j)[0];
+        p.y = getTR(i, j)[1];
+        p.z = height;
+        map_msg.cells.push_back(p);
+      }
+    }
+  }
+  return;
+}
+
+void renderMap(nav_msgs::GridCells& map_msg,
+               const std::vector<std::vector<double>>& map,
+               const double height = 0) {
+  map_msg.header.frame_id = "map";
+  map_msg.cell_width = config::ELEVATOR_GRID_SIZE;
+  map_msg.cell_height = config::ARM_GRID_SIZE;
+  for (int i = 0; i < config::ELEVATOR_GRID_NUMS; ++i) {
+    for (int j = 0; j < config::ARM_GRID_NUMS; ++j) {
+      if (map[i][j] > config::OBSTACLE_OFFSET - .1) {
         // mark if obstacle
         geometry_msgs::Point p;
         p.x = getTR(i, j)[0];
