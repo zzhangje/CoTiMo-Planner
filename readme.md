@@ -10,7 +10,7 @@ Team 8214's 2025 FRC season code for superstructure motion planning, written in 
 
 ```bash
 # Host
-chmod 777 start_dev.sh
+sudo chmod 777 start_dev.sh
 bash start_dev.sh
 ```
 
