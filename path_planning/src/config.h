@@ -16,10 +16,10 @@
 // #define DROPOUT 3
 
 #define DT .02
-#define XVMAX 1.0
-#define YVMAX 2.0
-#define XAMAX 3.0
-#define YAMAX 1.0
+#define XVMAX 3.0
+#define YVMAX 3.0
+#define XAMAX .5
+#define YAMAX .5
 #define GAMMA .5
 #define BETA 1e3
 #define TOPP_ITER 20

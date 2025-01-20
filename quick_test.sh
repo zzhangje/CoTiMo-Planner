@@ -1,1 +1,0 @@
-cd /ws && catkin_make && /ws/devel/lib/path_planning/test_demo

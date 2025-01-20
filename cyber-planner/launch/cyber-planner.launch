@@ -1,0 +1,9 @@
+<launch>
+
+    <node pkg="cyber-planner" type="plan_node" name="plan_node" output="screen" args="N N 0.5 6 1.98 0.2" />
+
+    <node pkg="cyber-planner" type="plot_node.py" name="plot_node" output="screen" />
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d /ws/src/rviz/default.rviz" /> 
+
+</launch>
