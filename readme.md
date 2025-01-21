@@ -8,16 +8,12 @@ Team 8214's 2025 FRC season code for superstructure motion planning, written in 
 
 ## Environment
 
-- Eigen 4.3.0
+- TBA
 
 ## Quick Start
 
 ```bash
-mkdir build
-cd build
-cmake ..
-make -j22
-./xxxx
+TBA
 ```
 
 ## See Also
