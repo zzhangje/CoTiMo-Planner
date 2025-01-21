@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   cyber-planner:
+    image: cyber-planner
     build:
       context: docker/
       dockerfile: cyber.dockerfile
@@ -14,5 +15,5 @@ services:
       - DISPLAY=:10.0
       - PORT=8214
     volumes:
-      - ${SRC_PATH}:/ws/src/app
+      - ${SRC_PATH}:/ws/src/
     tty: true

@@ -27,8 +27,5 @@ RUN apt-get update && \
     libdw-dev \
     libdwarf-dev \
     gdb && \
-    python3 && \ 
-    python3-pip && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    python3 -m pip install evo packaging
+    rm -rf /var/lib/apt/lists/*

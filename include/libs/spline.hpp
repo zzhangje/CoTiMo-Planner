@@ -5,8 +5,8 @@
 #include <eigen3/Eigen/Eigen>
 
 namespace spline {
-void spline(const Eigen::VectorXd& x, Eigen::VectorXd& a, Eigen::VectorXd& b,
-            Eigen::VectorXd& c, Eigen::VectorXd& d) {
+void cubic(const Eigen::VectorXd& x, Eigen::VectorXd& a, Eigen::VectorXd& b,
+           Eigen::VectorXd& c, Eigen::VectorXd& d) {
   int n = x.size() - 1;
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(n, n + 1),
                   B = Eigen::MatrixXd::Zero(n, n + 1),
