@@ -1,11 +1,6 @@
 #ifndef MAP_HPP
 #define MAP_HPP
 
-#include <nav_msgs/GridCells.h>
-#include <ros/ros.h>
-#include <visualization_msgs/Marker.h>
-#include <visualization_msgs/MarkerArray.h>
-
 #include <cmath>
 #include <eigen3/Eigen/Eigen>
 
@@ -121,127 +116,6 @@ void getGridMap(Object& env, Object& arm,
         map[tt][rr] = 0;
       }
     }
-  }
-  return;
-}
-
-void renderMap(nav_msgs::GridCells& map_msg,
-               const std::vector<std::vector<bool>>& map,
-               const double height = 0) {
-  map_msg.header.frame_id = "map";
-  map_msg.cell_width = config::ELEVATOR_GRID_SIZE;
-  map_msg.cell_height = config::ARM_GRID_SIZE;
-  for (int i = 0; i < config::ELEVATOR_GRID_NUMS; ++i) {
-    for (int j = 0; j < config::ARM_GRID_NUMS; ++j) {
-      if (!map[i][j]) {
-        // mark if obstacle
-        geometry_msgs::Point p;
-        p.x = getTR(i, j)[0];
-        p.y = getTR(i, j)[1];
-        p.z = height;
-        map_msg.cells.push_back(p);
-      }
-    }
-  }
-  return;
-}
-
-void renderMap(nav_msgs::GridCells& map_msg,
-               const std::vector<std::vector<double>>& map,
-               const double height = 0) {
-  map_msg.header.frame_id = "map";
-  map_msg.cell_width = config::ELEVATOR_GRID_SIZE;
-  map_msg.cell_height = config::ARM_GRID_SIZE;
-  for (int i = 0; i < config::ELEVATOR_GRID_NUMS; ++i) {
-    for (int j = 0; j < config::ARM_GRID_NUMS; ++j) {
-      if (map[i][j] > config::OBSTACLE_OFFSET - .1) {
-        // mark if obstacle
-        geometry_msgs::Point p;
-        p.x = getTR(i, j)[0];
-        p.y = getTR(i, j)[1];
-        p.z = height;
-        map_msg.cells.push_back(p);
-      }
-    }
-  }
-  return;
-}
-
-void renderBound(nav_msgs::GridCells& boundary_msg) {
-  boundary_msg.header.frame_id = "map";
-  boundary_msg.cell_width = config::ELEVATOR_GRID_SIZE;
-  boundary_msg.cell_height = config::ARM_GRID_SIZE;
-  for (int i = 0; i < config::ELEVATOR_GRID_NUMS; ++i) {
-    geometry_msgs::Point p1, p2;
-    p1.x = getTR(i, 0)[0];
-    p1.y = getTR(i, 0)[1];
-    p1.z = 0;
-    p2.x = getTR(i, config::ARM_GRID_NUMS - 1)[0];
-    p2.y = getTR(i, config::ARM_GRID_NUMS - 1)[1];
-    p2.z = 0;
-    boundary_msg.cells.push_back(p1);
-    boundary_msg.cells.push_back(p2);
-  }
-  for (int j = 0; j < config::ARM_GRID_NUMS; ++j) {
-    geometry_msgs::Point p1, p2;
-    p1.x = getTR(0, j)[0];
-    p1.y = getTR(0, j)[1];
-    p1.z = 0;
-    p2.x = getTR(config::ELEVATOR_GRID_NUMS - 1, j)[0];
-    p2.y = getTR(config::ELEVATOR_GRID_NUMS - 1, j)[1];
-    p2.z = 0;
-    boundary_msg.cells.push_back(p1);
-    boundary_msg.cells.push_back(p2);
-  }
-  return;
-}
-
-void renderPoints(visualization_msgs::Marker& points_msg,
-                  const std::vector<Eigen::Vector2d>& points) {
-  points_msg.header.frame_id = "map";
-  points_msg.ns = "points";
-  points_msg.id = 0;
-  points_msg.type = visualization_msgs::Marker::SPHERE_LIST;
-  points_msg.action = visualization_msgs::Marker::ADD;
-  points_msg.scale.x = 2 * config::ELEVATOR_GRID_SIZE;
-  points_msg.scale.y = 2 * config::ARM_GRID_SIZE;
-  points_msg.scale.z = 1;
-  points_msg.pose.orientation.w = 1.0;
-  points_msg.color.a = .9;
-  points_msg.color.r = 1.;
-  points_msg.color.g = 1.;
-  points_msg.color.b = 0;
-
-  geometry_msgs::Point p;
-  for (int i = 0; i < points.size(); ++i) {
-    p.x = points[i][0];
-    p.y = points[i][1];
-    p.z = 1.;
-    points_msg.points.push_back(p);
-  }
-  return;
-}
-
-void renderPath(visualization_msgs::Marker& path_msg,
-                const std::vector<Eigen::Vector2d>& path) {
-  path_msg.header.frame_id = "map";
-  path_msg.ns = "path";
-  path_msg.id = 0;
-  path_msg.type = visualization_msgs::Marker::LINE_STRIP;
-  path_msg.action = visualization_msgs::Marker::ADD;
-  path_msg.scale.x = config::ELEVATOR_GRID_SIZE;
-  path_msg.pose.orientation.w = 1.0;
-  path_msg.color.a = .6;
-  path_msg.color.r = 1;
-  path_msg.color.g = 0;
-  path_msg.color.b = 0;
-
-  geometry_msgs::Point p;
-  for (auto& x : path) {
-    p.x = x[0];
-    p.y = x[1];
-    p.z = 0;
-    path_msg.points.push_back(p);
   }
   return;
 }

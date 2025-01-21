@@ -1,22 +1,23 @@
-# Cyber Planner 2025 ROS Version
+# Cyber Planner 2025
 
 [![Next-Innovation](https://img.shields.io/badge/Next-Innovation-blueviolet?style=flat)](https://github.com/FRCNextInnovation) [![Lang](https://img.shields.io/badge/Lang-en--US-Green?style=flat)]()
 
-Team 8214's 2025 FRC season code for superstructure motion planning, written in ROS
+Team 8214's 2025 FRC season code for superstructure motion planning, written in GRPC
 
 <img src="./assets/next-innovation.png" style="zoom:50%;" >
+
+## Environment
+
+- Eigen 4.3.0
 
 ## Quick Start
 
 ```bash
-# Host
-sudo chmod 777 start_dev.sh
-bash start_dev.sh
-```
-
-```bash
-# Docker
-bash quick_run.sh
+mkdir build
+cd build
+cmake ..
+make -j22
+./xxxx
 ```
 
 ## See Also
