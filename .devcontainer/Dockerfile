@@ -28,7 +28,7 @@ RUN apt install -y git
 # protobuf
 RUN apt install -y protobuf-compiler
 
-# protobuf & grpc
+# grpc
 ENV MY_INSTALL_DIR=$HOME/.local
 RUN mkdir -p $MY_INSTALL_DIR
 ENV PATH="$MY_INSTALL_DIR/bin:$PATH"
