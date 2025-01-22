@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+
+package com.nextinnovation.armtrajectoryservice;
+
+message ArmPositionState {
+  double shoulderHeightMeter = 1;
+  double elbowPositionDegree = 2;
+}
+
+message ArmCurrentState {
+  double shoulderCurrentAmp = 1;
+  double elbowCurrentAmp = 2;
+}
+
+message ArmTrajectoryParameter {
+  ArmPositionState start = 1;
+  ArmPositionState end = 2;
+  bool hasAlgae = 3;
+  bool hasCoral = 4;
+}
+
+message ArmTrajectoryState {
+  double timestamp = 1;
+  ArmPositionState position = 2;
+  ArmCurrentState current = 3;
+}
+
+message ArmTrajectory {
+  ArmTrajectoryParameter parameter = 1;
+  repeated ArmTrajectoryState states = 2;
+}
+
+message ArmTrajectoryGenerationError {
+  string reason = 1;
+}
+
+message Response {
+  oneof response {
+    ArmTrajectory trajectory = 1;
+    ArmTrajectoryGenerationError error = 2;
+  }
+}
+
+service ArmTrajectoryService {
+  rpc generate(ArmTrajectoryParameter) returns (Response) {}
+}

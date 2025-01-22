@@ -6,7 +6,10 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/include/libs",
-                "${workspaceFolder}/include/sys"
+                "${workspaceFolder}/include/sys",
+                "${workspaceFolder}/build",
+                "/usr/include",
+                "/usr/local/include"
             ],
             "defines": [],
             "cStandard": "c17",

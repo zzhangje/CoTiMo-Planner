@@ -1,13 +1,14 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
+#include <chrono>
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 
-enum class LogLevel { DEBUG, INFO, WARN, ERROR };
+enum LogLevel { DEBUG, INFO, WARN, ERROR };
 
 std::string toString(LogLevel level) {
   switch (level) {
@@ -25,36 +26,42 @@ std::string toString(LogLevel level) {
 }
 
 void getTime(std::string &timestamp) {
+  auto now = std::chrono::system_clock::now();
+  auto now_time_t = std::chrono::system_clock::to_time_t(now);
+  auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now.time_since_epoch()) %
+                std::chrono::seconds(1);
+
   char buffer[20];
-  time_t now = time(0);
-  tm *ltm = localtime(&now);
-  strftime(buffer, 20, "%Y-%m-%d %H:%M:%S", ltm);
-  timestamp = buffer;
+  strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localtime(&now_time_t));
+  timestamp = std::string(buffer) + "." + std::to_string(now_ms.count());
 }
 
 class Logger {
  private:
   static Logger *instance;
+  std::ofstream logFile;
+  std::string logFileName;
+
   Logger() {
     time_t now = time(0);
-    const char *homeDirCStr = getenv("HOME");
-    if (homeDirCStr == nullptr) {
-      std::cerr << "HOME environment variable is not set" << std::endl;
-      return;
-    }
-    std::string homeDir = homeDirCStr;
-    std::string logDir = homeDir + "/cyber-planner/logs/";
-    logFile.open(logDir + std::to_string(now) + ".log", std::ios::out);
-
+    std::string logDir = "/workspaces/cyber-planner-2025/logs/";
+    logFileName = logDir + std::to_string(now) + ".log";
+    logFile.open(logFileName, std::ios::out);
     if (!logFile.is_open()) {
-      std::cerr << "Failed to create log file, path: "
-                << logDir + std::to_string(now) + ".log" << std::endl;
+      std::cerr << "Failed to create log file, path: " << logFileName
+                << std::endl;
     } else {
-      std::cout << "Log file created successfully, path: "
-                << logDir + std::to_string(now) + ".log" << std::endl;
+      std::cout << "Successfully created log file, path: " << logFileName
+                << std::endl;
     }
   }
-  std::ofstream logFile;
+
+  ~Logger() {
+    if (logFile.is_open()) {
+      logFile.close();
+    }
+  }
 
  public:
   static Logger *getInstance() {
@@ -63,11 +70,7 @@ class Logger {
     }
     return instance;
   }
-  ~Logger() {
-    if (logFile.is_open()) {
-      logFile.close();
-    }
-  }
+
   void log(LogLevel level, const std::string &header,
            const std::string &message) {
     std::string timestamp;
@@ -81,6 +84,8 @@ class Logger {
       logFile.flush();
     }
   }
+
+  std::string getLogFileName() { return logFileName; }
 };
 
 Logger *Logger::instance = nullptr;

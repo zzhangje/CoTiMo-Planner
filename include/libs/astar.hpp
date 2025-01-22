@@ -1,15 +1,17 @@
 #ifndef ASTAR_HPP
 #define ASTAR_HPP
 
-#include <ros/ros.h>
-
 #include <eigen3/Eigen/Eigen>
+
+#include "Logger.hpp"
 
 namespace astar {
 bool astar(const std::vector<std::vector<bool>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,
            std::vector<Eigen::Vector2i>& path,
            std::vector<Eigen::Vector2i>& visited) {
+  Logger::getInstance()->log(LogLevel::INFO, "A Star",
+                             "Running A* algorithm...");
   int n = grid_map.size(), m = grid_map[0].size();
   std::vector<std::vector<int>> g(n, std::vector<int>(m, 0x3f3f3f3f));
   std::vector<std::vector<Eigen::Vector2i>> parent(
@@ -69,6 +71,8 @@ bool astar(const std::vector<std::vector<bool>>& grid_map,
   }
 
   path.clear();
+  Logger::getInstance()->log(LogLevel::INFO, "A Star",
+                             "A* algorithm finished.");
   if (found) {
     while (current != start) {
       path.push_back(current);
@@ -86,6 +90,9 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
            std::vector<Eigen::Vector2i>& path,
            std::vector<Eigen::Vector2i>& visited, double obstacle_offset = 99.9,
            double heuristic_coefficient = 1.) {
+  Logger::getInstance()->log(LogLevel::INFO, "A Star",
+                             "Running A* algorithm...");
+
   int n = grid_map.size(), m = grid_map[0].size();
   std::vector<std::vector<double>> g(n, std::vector<double>(m, 0x3f3f3f3f));
   std::vector<std::vector<Eigen::Vector2i>> parent(
@@ -151,6 +158,8 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
     }
   }
 
+  Logger::getInstance()->log(LogLevel::INFO, "A Star",
+                             "A* algorithm finished.");
   return !path.empty();
 }
 
@@ -167,6 +176,10 @@ void samplePath(const std::vector<Eigen::Vector2i>& path,
     sampled_path.push_back(path[i]);
   }
   sampled_path.push_back(path[n - 1]);
+  Logger::getInstance()->log(
+      LogLevel::INFO, "A Star",
+      "Original path size: " + std::to_string(n) +
+          ", sampled path size: " + std::to_string(sampled_path.size()));
 }
 
 }  // namespace astar

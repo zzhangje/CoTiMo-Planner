@@ -33,7 +33,7 @@ ENV MY_INSTALL_DIR=$HOME/.local
 RUN mkdir -p $MY_INSTALL_DIR
 ENV PATH="$MY_INSTALL_DIR/bin:$PATH"
 
-RUN apt install -y build-essential autoconf libtool pkg-config
+RUN apt install -y autoconf automake libtool pkg-config
 
 RUN git clone --recurse-submodules -b v1.66.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc /var/local/git/grpc
 
