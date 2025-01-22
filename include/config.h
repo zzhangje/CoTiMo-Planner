@@ -9,7 +9,7 @@ const double OBSTACLE_FIELD_REDUCTION = .6;
 const double ASTAR_HEURISTIC_COEFFICIENT = 1;
 };  // namespace dynamic
 
-namespace alpha {
+namespace alphabot {
 const double ARM_MAX_RPS = 2 * M_PI;
 const double ELEVATOR_MAX_RPS = 2 * M_PI;
 const double ARM_MAX_RPSS = .01;
@@ -49,7 +49,14 @@ const int ARM_GRID_NUMS =
 const double ARM_REDUCTION = 1.;
 const double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION;
 const double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION;
-};  // namespace alpha
+
+const double ARM_MAX_VOLTAGE = 12;
+const double ARM_Kv = 1;
+const double ARM_Ka = 1;
+const double ELEVATOR_MAX_VOLTAGE = 12;
+const double ELEVATOR_Kv = 1;
+const double ELEVATOR_Ka = 1;
+};  // namespace alphabot
 
 namespace static {
   const double L1_FRONT_HEIGHT = .454;
