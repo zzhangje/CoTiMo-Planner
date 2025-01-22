@@ -43,7 +43,6 @@ RUN cd /var/local/git/grpc && \
     cmake -DgRPC_INSTALL=ON \
     -DgRPC_BUILD_TESTS=OFF \
     -DCMAKE_CXX_STANDARD=17 \
-    -DCMAKE_INSTALL_PREFIX=$MY_INSTALL_DIR \
     ../.. && \
-    make -j 4 && \
+    make -j 8 && \
     make install
