@@ -1,0 +1,23 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+    "name": "cyber-planner",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "cyber-planner",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-azuretools.vscode-docker",
+                "oderwat.indent-rainbow",
+                "tal7aouy.rainbow-bracket",
+                "Gruntfuggly.todo-tree",
+                "2gua.rainbow-brackets",
+                "emeraldwalk.RunOnSave",
+                "zxh404.vscode-proto3",
+                "EditorConfig.EditorConfig",
+                "ms-vscode.cpptools"
+            ]
+        }
+    }
+}

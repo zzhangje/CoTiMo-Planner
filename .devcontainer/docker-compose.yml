@@ -1,0 +1,9 @@
+services:
+  cyber-planner:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+    network_mode: host
+    command: sleep infinity
