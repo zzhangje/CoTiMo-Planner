@@ -84,7 +84,8 @@ bool astar(const std::vector<std::vector<bool>>& grid_map,
 bool astar(const std::vector<std::vector<double>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,
            std::vector<Eigen::Vector2i>& path,
-           std::vector<Eigen::Vector2i>& visited) {
+           std::vector<Eigen::Vector2i>& visited, double obstacle_offset = 99.9,
+           double heuristic_coefficient = 1.) {
   int n = grid_map.size(), m = grid_map[0].size();
   std::vector<std::vector<double>> g(n, std::vector<double>(m, 0x3f3f3f3f));
   std::vector<std::vector<Eigen::Vector2i>> parent(
@@ -120,7 +121,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
       Eigen::Vector2i next = current + d;
       // out of bounds or obstacle
       if (next(0) < 0 || next(0) >= n || next(1) < 0 || next(1) >= m ||
-          grid_map[next(0)][next(1)] > config::OBSTACLE_OFFSET - .1) {
+          grid_map[next(0)][next(1)] > obstacle_offset) {
         continue;
       }
 
@@ -142,10 +143,10 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
                               grid_map[current(0)][current(1)] +
                               (current - next).lpNorm<1>();
         parent[next(0)][next(1)] = current;
-        open.insert(std::make_pair(
-            g[next(0)][next(1)] +
-                config::ASTAR_HEURISTIC_COEFFICIENT * (goal - next).lpNorm<2>(),
-            next));
+        open.insert(
+            std::make_pair(g[next(0)][next(1)] + heuristic_coefficient *
+                                                     (goal - next).lpNorm<2>(),
+                           next));
       }
     }
   }
