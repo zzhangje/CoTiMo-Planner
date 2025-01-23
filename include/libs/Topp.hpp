@@ -5,10 +5,10 @@
 #include <iostream>
 #include <thread>
 
-#include "ArmTrajectoryService.grpc.pb.h"
 #include "config.h"
 #include "lbfgs.hpp"
 #include "log.hpp"
+#include "proto/ArmTrajectoryService.grpc.pb.h"
 #include "spline.hpp"
 
 #define BETA 1e3
@@ -17,6 +17,7 @@
 using com::nextinnovation::armtrajectoryservice::ArmCurrentState;
 using com::nextinnovation::armtrajectoryservice::ArmPositionState;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryState;
+using namespace config::alphabot;
 
 Eigen::VectorXd max(const Eigen::VectorXd& v, const double num) {
   Eigen::VectorXd res = v;
@@ -127,8 +128,8 @@ class Topp {
 
     double cost;
 
-    auto now = std::chrono::high_resolution_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    // auto now = std::chrono::high_resolution_clock::now();
+    auto now = std::chrono::steady_clock::now();
     auto lastMillis = std::chrono::duration_cast<std::chrono::milliseconds>(
                           now.time_since_epoch())
                           .count();
@@ -140,8 +141,8 @@ class Topp {
       this->iter++;
       lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
 
-      now = std::chrono::high_resolution_clock::now();
-      time_t_now = std::chrono::system_clock::to_time_t(now);
+      // now = std::chrono::high_resolution_clock::now();
+      now = std::chrono::steady_clock::now();
       auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
                         now.time_since_epoch())
                         .count();
@@ -182,7 +183,7 @@ class Topp {
     ArmCurrentState current;
 
     position.set_shoulderheightmeter(points[0].x());
-    position.set_elbowpositiondegree(points[0].y() / M_PI * 180);
+    position.set_elbowpositiondegree(points[0].y());
     current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(0) * ek(0) + ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)));
     current.set_elbowcurrentamp(ARM_Kv * qr1(0) * ek(0) + ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0)));
     state.set_timestamp(0);
@@ -192,7 +193,7 @@ class Topp {
 
     for (int i = 1; i < n; ++i) {
       position.set_shoulderheightmeter(points[i].x());
-      position.set_elbowpositiondegree(points[i].y() / M_PI * 180);
+      position.set_elbowpositiondegree(points[i].y());
       current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(i) * ek(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
       current.set_elbowcurrentamp(ARM_Kv * qr1(i) * ek(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
       state.set_timestamp(arc(i - 1) * 2 / (ek(i) + ek(i - 1)));
@@ -202,7 +203,7 @@ class Topp {
     }
 
     position.set_shoulderheightmeter(points[n].x());
-    position.set_elbowpositiondegree(points[n].y() / M_PI * 180);
+    position.set_elbowpositiondegree(points[n].y());
     current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(n) * ek(n) + ELEVATOR_Ka * qt1(n) * bk(n));
     current.set_elbowcurrentamp(ARM_Kv * qr1(n) * ek(n) + ARM_Ka * qr1(n) * bk(n));
     state.set_timestamp(arc(n - 1) * 2 / (ek(n) + ek(n - 1)));
@@ -213,7 +214,7 @@ class Topp {
 
  private:
   void setup() {
-    log_info("Setting up TOPP problem[*/] ...");
+    log_info("Setting up TOPP problem[0/] with %d segments.", n);
 
     // get spline parameters
     qt = Eigen::VectorXd::Zero(n + 1), qr = Eigen::VectorXd::Zero(n + 1);

@@ -6,8 +6,11 @@
 #include <memory>
 #include <string>
 
+#include "Object.hpp"
 #include "Topp.hpp"
+#include "astar.hpp"
 #include "log.hpp"
+#include "map.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
 
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
@@ -43,8 +46,16 @@ int main(int argc, char **argv) {
 
   log_info("Cyber Planner 2025 is running, press Ctrl+C to exit.");
 
+  std::vector<std::vector<double>> map;
+  std::vector<Eigen::Vector2i> path, visited, samplePath;
+  Object env = Object();
+  Object arm = Object(false, false, false);
+  getGridMap(env, arm, map);
+  astar::astar(map, Eigen::Vector2i(0, 0), Eigen::Vector2i(60, 20), path, visited);
+  // astar::samplePath(path, samplePath, 3);
+
   std::vector<Eigen::Vector2d> points;
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 10; ++i) {
     points.push_back(Eigen::Vector2d(i, i));
   }
   Topp topp(points);

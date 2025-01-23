@@ -6,6 +6,10 @@
 
 #include "Object.hpp"
 #include "config.h"
+#include "log.hpp"
+
+using namespace config::dynamic;
+using namespace config::alphabot;
 
 double clamp(double x, double min, double max) {
   return std::min(std::max(x, min), max);
@@ -18,9 +22,9 @@ Eigen::Vector2i getGridIdx(const double t, const double r) {
                                       ELEVATOR_MAX_POSITION) -
                                 ELEVATOR_MIN_POSITION) /
                                ELEVATOR_GRID_SIZE),
-                         floor((clamp(r, ARM_MIN_THETA_RADIAN,
-                                      ARM_MAX_THETA_RADIAN) -
-                                ARM_MIN_THETA_RADIAN) /
+                         floor((clamp(r, ARM_MIN_THETA_ROTATION,
+                                      ARM_MAX_THETA_ROTATION) -
+                                ARM_MAX_THETA_ROTATION) /
                                ARM_GRID_SIZE));
 }
 
@@ -40,7 +44,7 @@ std::vector<Eigen::Vector2i> getGridIdxs(
 Eigen::Vector2d getTR(const int t, const int r) {
   return Eigen::Vector2d(
       t * ELEVATOR_GRID_SIZE + ELEVATOR_MIN_POSITION,
-      r * ARM_GRID_SIZE + ARM_MIN_THETA_RADIAN);
+      r * ARM_GRID_SIZE + ARM_MIN_THETA_ROTATION);
 }
 
 Eigen::Vector2d getTR(const Eigen::Vector2i& idx) {
@@ -68,6 +72,7 @@ void getGridMap(Object& env, Object& arm, std::vector<std::vector<bool>>& map) {
       map[tt][rr] = !arm_copy.intersect(env);
     }
   }
+  log_info("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
   return;
 }
 
@@ -76,8 +81,8 @@ void getGridMap(Object& env, Object& arm,
   map = std::vector<std::vector<double>>(
       ELEVATOR_GRID_NUMS,
       std::vector<double>(ARM_GRID_NUMS, true));
-  const double obstacle = dynamic::OBSTACLE_OFFSET;
-  const double reduce = dynamic::OBSTACLE_FIELD_REDUCTION;
+  const double obstacle = OBSTACLE_OFFSET;
+  const double reduce = OBSTACLE_FIELD_REDUCTION;
   // bound of the map
   for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
     map[tt][0] = obstacle * reduce;
@@ -117,6 +122,7 @@ void getGridMap(Object& env, Object& arm,
       }
     }
   }
+  log_info("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
   return;
 }
 
