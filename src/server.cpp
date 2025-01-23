@@ -1,12 +1,14 @@
 #include <grpcpp/grpcpp.h>
 
 #include <csignal>
+#include <eigen3/Eigen/Eigen>
 #include <iostream>
 #include <memory>
 #include <string>
 
+#include "Topp.hpp"
+#include "log.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
-#include "Logger.hpp"
 
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;
@@ -17,47 +19,13 @@ using grpc::ServerContext;
 using grpc::Status;
 
 volatile std::sig_atomic_t signalStatus = 0;
-void signalHandler(int signal)
-{
-  Logger::getInstance()->log(LogLevel::WARN, "Signal Handler",
-                             "Received signal, shutting down...");
+void signalHandler(int signal) {
+  log_debug(("Received signal " + std::to_string(signal) + ".").c_str());
   signalStatus = 1;
 }
 
-class ArmTrajectoryServiceImpl final : public ArmTrajectoryService::Service
-{
-  Status generate(ServerContext *context, const ArmTrajectoryParameter *request,
-                  Response *response) override
-  {
-    Logger::getInstance()->log(
-        LogLevel::INFO, "gRPC Server",
-        "Received a request to generate arm trajectory.");
-    // Do some processing here
-
-    return Status::OK;
-  }
-};
-
-void runServer()
-{
-  std::string serverAddress("0.0.0.0:50051");
-  ArmTrajectoryServiceImpl service;
-
-  //   ServerBuilder builder;
-  //   builder.AddListeningPort(serverAddress,
-  //   grpc::InsecureServerCredentials()); builder.RegisterService(&service);
-
-  //   std::unique_ptr<Server> server(builder.BuildAndStart());
-  //   Logger::getInstance()->log(LogLevel::INFO, "gRPC Server",
-  //                              "Service listening on " + serverAddress);
-
-  //   server->Wait();
-}
-
-int main(int argc, char **argv)
-{
-  Logger::getInstance()->log(
-      LogLevel::INFO, "Cyber Planner",
+int main(int argc, char **argv) {
+  log_info(
       "Welcome to Cyber Planner 2025!"
       "\n"
       "  ______   ______  _____ ____  \n"
@@ -72,24 +40,22 @@ int main(int argc, char **argv)
       "|_|   |_____/_/   \\_\\_| \\_|_| \\_|_____|_| \\_\\\n");
 
   std::signal(SIGINT, signalHandler);
-  runServer();
 
-  Logger::getInstance()->log(
-      LogLevel::INFO, "Cyber Planner",
-      "Cyber Planner 2025 is running, press Ctrl+C to exit.");
+  log_info("Cyber Planner 2025 is running, press Ctrl+C to exit.");
 
-  while (!signalStatus)
-  {
+  std::vector<Eigen::Vector2d> points;
+  for (int i = 0; i < 10; i++) {
+    points.push_back(Eigen::Vector2d(i, i));
+  }
+  Topp topp(points);
+
+  while (!signalStatus) {
   }
 
-  Logger::getInstance()->log(LogLevel::INFO, "Cyber Planner",
-                             "Shutting down Cyber Planner 2025...");
+  log_info("Shutting down Cyber Planner 2025...");
 
   // Do some cleanup here
 
-  Logger::getInstance()->log(
-      LogLevel::INFO, "Cyber Planner",
-      "Program terminated successfully, logs are saved in " +
-          Logger::getInstance()->getLogFileName());
+  log_info("Cyber Planner 2025 has been shut down.");
   return 0;
 }
