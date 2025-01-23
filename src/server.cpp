@@ -1,33 +1,31 @@
 #include <grpcpp/grpcpp.h>
-
-#include <csignal>
-#include <eigen3/Eigen/Eigen>
-#include <iostream>
-#include <memory>
-#include <string>
-
-#include "Object.hpp"
-#include "Topp.hpp"
-#include "astar.hpp"
-#include "log.hpp"
-#include "map.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
+#include "log.hpp"
 
-using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
-using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;
-using com::nextinnovation::armtrajectoryservice::Response;
+using namespace com::nextinnovation::armtrajectoryservice;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
 
-volatile std::sig_atomic_t signalStatus = 0;
-void signalHandler(int signal) {
-  log_debug(("Received signal " + std::to_string(signal) + ".").c_str());
-  signalStatus = 1;
-}
+class Service final : public ArmTrajectoryService::Service {
+  Status generate(ServerContext* context, const ArmTrajectoryParameter* request,
+                 Response* response) override {
+    auto* trajectory = response->mutable_trajectory();
+    *trajectory->mutable_parameter() = *request;
+    
+    for (int i = 0; i < 5; i++) {
+      auto* state = trajectory->add_states();
+      state->set_timestamp(i * 0.1);
+      auto* pos = state->mutable_position();
+      pos->set_shoulderheightmeter(0.5 + i * 0.1);
+      pos->set_elbowpositiondegree(45.0 + i * 10.0);
+    }
+    return Status::OK;
+  }
+};
 
-int main(int argc, char **argv) {
+int main() {
   log_info(
       "Welcome to Cyber Planner 2025!"
       "\n"
@@ -42,31 +40,11 @@ int main(int argc, char **argv) {
       "|  __/| |___ / ___ \\| |\\  | |\\  | |___|  _ < \n"
       "|_|   |_____/_/   \\_\\_| \\_|_| \\_|_____|_| \\_\\\n");
 
-  std::signal(SIGINT, signalHandler);
-
-  log_info("Cyber Planner 2025 is running, press Ctrl+C to exit.");
-
-  std::vector<std::vector<double>> map;
-  std::vector<Eigen::Vector2i> path, visited, samplePath;
-  Object env = Object();
-  Object arm = Object(false, false, false);
-  getGridMap(env, arm, map);
-  astar::astar(map, Eigen::Vector2i(0, 0), Eigen::Vector2i(60, 20), path, visited);
-  // astar::samplePath(path, samplePath, 3);
-
-  std::vector<Eigen::Vector2d> points;
-  for (int i = 0; i < 10; ++i) {
-    points.push_back(Eigen::Vector2d(i, i));
-  }
-  Topp topp(points);
-
-  while (!signalStatus) {
-  }
-
-  log_info("Shutting down Cyber Planner 2025...");
-
-  // Do some cleanup here
-
-  log_info("Cyber Planner 2025 has been shut down.");
+  Service service;
+  ServerBuilder builder;
+  builder.AddListeningPort("0.0.0.0:50051", grpc::InsecureServerCredentials());
+  builder.RegisterService(&service);
+  builder.BuildAndStart()->Wait();
+  
   return 0;
 }

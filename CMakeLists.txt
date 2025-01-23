@@ -47,3 +47,15 @@ target_link_libraries(Cyber_Planner
     trajectory_native_proto
     Eigen3::Eigen
 )
+
+add_executable(Client
+    src/client.cpp
+    ${HEADER_FILES}
+)
+
+target_include_directories(Client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
+
+target_link_libraries(Client
+    trajectory_native_proto
+    Eigen3::Eigen
+)
