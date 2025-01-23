@@ -16,7 +16,9 @@
                 "emeraldwalk.RunOnSave",
                 "zxh404.vscode-proto3",
                 "EditorConfig.EditorConfig",
-                "ms-vscode.cpptools"
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.cpptools-extension-pack"
             ]
         }
     }

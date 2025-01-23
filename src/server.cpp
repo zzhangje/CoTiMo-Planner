@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include "ArmTrajectoryService.grpc.pb.h"
+#include "proto/ArmTrajectoryService.grpc.pb.h"
 #include "Logger.hpp"
 
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
@@ -17,15 +17,18 @@ using grpc::ServerContext;
 using grpc::Status;
 
 volatile std::sig_atomic_t signalStatus = 0;
-void signalHandler(int signal) {
+void signalHandler(int signal)
+{
   Logger::getInstance()->log(LogLevel::WARN, "Signal Handler",
                              "Received signal, shutting down...");
   signalStatus = 1;
 }
 
-class ArmTrajectoryServiceImpl final : public ArmTrajectoryService::Service {
+class ArmTrajectoryServiceImpl final : public ArmTrajectoryService::Service
+{
   Status generate(ServerContext *context, const ArmTrajectoryParameter *request,
-                  Response *response) override {
+                  Response *response) override
+  {
     Logger::getInstance()->log(
         LogLevel::INFO, "gRPC Server",
         "Received a request to generate arm trajectory.");
@@ -35,7 +38,8 @@ class ArmTrajectoryServiceImpl final : public ArmTrajectoryService::Service {
   }
 };
 
-void runServer() {
+void runServer()
+{
   std::string serverAddress("0.0.0.0:50051");
   ArmTrajectoryServiceImpl service;
 
@@ -50,7 +54,8 @@ void runServer() {
   //   server->Wait();
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
   Logger::getInstance()->log(
       LogLevel::INFO, "Cyber Planner",
       "Welcome to Cyber Planner 2025!"
@@ -73,7 +78,8 @@ int main(int argc, char **argv) {
       LogLevel::INFO, "Cyber Planner",
       "Cyber Planner 2025 is running, press Ctrl+C to exit.");
 
-  while (!signalStatus) {
+  while (!signalStatus)
+  {
   }
 
   Logger::getInstance()->log(LogLevel::INFO, "Cyber Planner",

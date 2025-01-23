@@ -1,5 +1,5 @@
-#ifndef TOPP_HPP
-#define TOPP_HPP
+
+#include <ros/ros.h>
 
 #include <cmath>
 #include <eigen3/Eigen/Eigen>
@@ -343,10 +343,25 @@ class Topp {
     eta = Eigen::VectorXd::Zero(n_ineq);
     rho = 1;
 
-    Logger::getInstance()->log(LogLevel::INFO, "TOPP",
-                               "TOPP problem setup complete.");
-  }
+    /**
+     * -b_k <= 0
+     * q'_x(s_k)^2 * b_k <= vmax^2
+     * q'_y(s_k)^2 * b_k <= vmax^2
+     */
+    P(7 * n, 2 * n) = -1;
+    // q(7 * n) = 0;
+    P(7 * n + 1, 2 * n) = qx1(n) * qx1(n);
+    P(7 * n + 2, 2 * n) = qy1(n) * qy1(n);
+    q(7 * n + 1) = config::ELEVATOR_VMAX * config::ELEVATOR_VMAX;
+    q(7 * n + 2) = config::ARM_VMAX * config::ARM_VMAX;
+    rho = 1;
 
+    x = Eigen::VectorXd::Zero(f.rows());
+    mu = std::vector<Eigen::VectorXd>(A.size(), Eigen::VectorXd::Zero(3));
+    lambda = Eigen::VectorXd::Zero(G.rows());
+    eta = Eigen::VectorXd::Zero(P.rows());
+  }
+  
   static double loss(void* instance, const Eigen::VectorXd& optX,
                      Eigen::VectorXd& optG) {
     Topp* self = static_cast<Topp*>(instance);
@@ -367,5 +382,3 @@ class Topp {
     return self->f.dot(optX) + self->rho / 2 * (sum(resQuadeqs) + sum(squaredNorm(resSocs)) + resEq.squaredNorm() + resIneq.squaredNorm());
   }
 };
-
-#endif

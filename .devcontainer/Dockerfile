@@ -29,21 +29,14 @@ RUN apt install -y git
 RUN apt install -y protobuf-compiler
 
 # grpc
-ENV MY_INSTALL_DIR=$HOME/.local
-RUN mkdir -p $MY_INSTALL_DIR
-ENV PATH="$MY_INSTALL_DIR/bin:$PATH"
-
 RUN apt install -y autoconf automake libtool pkg-config
-
 RUN git clone --recurse-submodules -b v1.66.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc /var/local/git/grpc
-
 RUN cd /var/local/git/grpc && \
     mkdir -p cmake/build && \
     cd cmake/build && \
     cmake -DgRPC_INSTALL=ON \
     -DgRPC_BUILD_TESTS=OFF \
     -DCMAKE_CXX_STANDARD=17 \
-    -DCMAKE_INSTALL_PREFIX=$MY_INSTALL_DIR \
     ../.. && \
-    make -j 4 && \
+    make -j 8 && \
     make install
