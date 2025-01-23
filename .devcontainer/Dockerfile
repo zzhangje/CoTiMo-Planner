@@ -16,27 +16,16 @@ RUN python3 get-pip.py
 # cpp
 RUN apt install -y cmake gdb gcc g++
 
-# eigen
-RUN apt install -y libeigen3-dev
-
 # suitesparse
 RUN apt install -y libsuitesparse-dev
 
 # git
 RUN apt install -y git
 
-# protobuf
-RUN apt install -y protobuf-compiler
+# vcpkg dependencies
+RUN apt install -y zip unzip tar pkg-config
 
-# grpc
-RUN apt install -y autoconf automake libtool pkg-config
-RUN git clone --recurse-submodules -b v1.66.0 --depth 1 --shallow-submodules https://github.com/grpc/grpc /var/local/git/grpc
-RUN cd /var/local/git/grpc && \
-    mkdir -p cmake/build && \
-    cd cmake/build && \
-    cmake -DgRPC_INSTALL=ON \
-    -DgRPC_BUILD_TESTS=OFF \
-    -DCMAKE_CXX_STANDARD=17 \
-    ../.. && \
-    make -j 8 && \
-    make install
+# vcpkg
+RUN git clone https://github.com/microsoft/vcpkg.git
+RUN cd vcpkg && ./bootstrap-vcpkg.sh
+RUN cd vcpkg && ./vcpkg install eigen3 grpc protobuf
