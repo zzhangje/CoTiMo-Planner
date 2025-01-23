@@ -57,10 +57,10 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i) {
     points.push_back(Eigen::Vector2d(i, i));
   }
-  Toppp toppp(points);
-  for (int i = 0; i < 30; ++i) {
-    toppp.step();
-  }
+  // Toppp toppp(points);
+  // for (int i = 0; i < 30; ++i) {
+  //   toppp.step();
+  // }
 
   Topp topp(points);
 

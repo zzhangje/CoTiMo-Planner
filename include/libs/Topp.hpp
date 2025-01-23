@@ -113,6 +113,7 @@ class Topp {
   double rho;
   Eigen::VectorXd lambda, eta;
   std::vector<Eigen::VectorXd> mus;
+  std::vector<double> nus;
 
  public:
   Topp(const std::vector<Eigen::Vector2d>& points,
@@ -141,7 +142,11 @@ class Topp {
 
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
-      lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
+      int ret = lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
+      if (ret < 0) {
+        log_error("L-BFGS optimization failed with code %d.", ret);
+        break;
+      }
       std::cout << x.segment(0, n).transpose() << std::endl;
       std::cout << x.segment(n, n + 1).transpose() << std::endl;
       std::cout << x.segment(2 * n + 1, n + 1).transpose() << std::endl;
@@ -159,6 +164,9 @@ class Topp {
       // update dual variables
       for (int i = 0; i < n_soc; ++i) {
         mus[i] = socProjection(mus[i] - rho * (As[i] * x + bs[i]));
+      }
+      for (int i = 0; i < n_quadeq; ++i) {
+        nus[i] = nus[i] + rho * (x.transpose() * Js[i] * x - rs[i].dot(x));
       }
       lambda = lambda + rho * (G * x - h);
       eta = max(eta + rho * (P * x - q), 0);
@@ -259,8 +267,8 @@ class Topp {
 
     // initialize optimization variables
     n_var = 5 * n + 3;
-    x = Eigen::VectorXd::Zero(n_var);
-    // x = Eigen::VectorXd::Random(n_var);
+    // x = Eigen::VectorXd::Zero(n_var);
+    x = Eigen::VectorXd::Random(n_var);
     g = Eigen::VectorXd::Zero(n_var);
     log_debug("Setting up TOPP problem[3/] optimization variables initialized.");
 
@@ -278,7 +286,7 @@ class Topp {
      * initialize second order cone constraints
      */
     As.clear(), bs.clear();
-    n_soc = 2 * n + 1;
+    n_soc = n;
 
     /**
      * ||  2*c_k  ||
@@ -289,17 +297,17 @@ class Topp {
      * ||  2*c_k  || in Q
      * || b_k - 1 ||
      */
-    for (int i = 0; i <= n; ++i) {
-      Eigen::SparseMatrix<double> A_(3, n_var);
-      Eigen::SparseVector<double> b_(3);
-      A_.insert(0, getB(i)) = 1;  // b_k
-      A_.insert(1, getC(i)) = 2;  // c_k
-      A_.insert(2, getB(i)) = 1;  // b_k
-      b_.insert(0) = 1;
-      b_.insert(2) = -1;
-      As.push_back(A_);
-      bs.push_back(b_);
-    }
+    // for (int i = 0; i <= n; ++i) {
+    //   Eigen::SparseMatrix<double> A_(3, n_var);
+    //   Eigen::SparseVector<double> b_(3);
+    //   A_.insert(0, getB(i)) = 1;  // b_k
+    //   A_.insert(1, getC(i)) = 2;  // c_k
+    //   A_.insert(2, getB(i)) = 1;  // b_k
+    //   b_.insert(0) = 1;
+    //   b_.insert(2) = -1;
+    //   As.push_back(A_);
+    //   bs.push_back(b_);
+    // }
 
     /**
      * ||          2          ||
@@ -453,7 +461,7 @@ class Topp {
     for (int i = 0; i <= n; ++i) {
       Eigen::SparseMatrix<double> J_(n_var, n_var);
       Eigen::SparseVector<double> r_(n_var);
-      J_.insert(getE(i), getE(i)) = 1;  // e_k
+      J_.insert(getC(i), getC(i)) = 1;  // e_k
       r_.insert(getB(i)) = 1;           // b_k
       Js.push_back(J_);
       rs.push_back(r_);
@@ -462,6 +470,7 @@ class Topp {
 
     // initialize dual variables
     mus = std::vector<Eigen::VectorXd>(n_soc, Eigen::VectorXd::Zero(3));
+    nus = std::vector<double>(n_quadeq, 0);
     lambda = Eigen::VectorXd::Zero(n_eq);
     eta = Eigen::VectorXd::Zero(n_ineq);
     rho = 1;
@@ -495,8 +504,8 @@ class Topp {
 
     // quadratic equality constraints
     for (int i = 0; i < topp->n_quadeq; ++i) {
-      double resQuadeq = (optX.transpose() * topp->Js[i]).dot(optX) - topp->rs[i].dot(optX);
-      res += 1e3 / 2 * resQuadeq * resQuadeq;
+      double resQuadeq = (optX.transpose() * topp->Js[i]).dot(optX) - topp->rs[i].dot(optX) + topp->nus[i] / topp->rho;
+      res += topp->rho / 2 * resQuadeq * resQuadeq;
       optG += topp->rho * resQuadeq * (2 * topp->Js[i] * optX - topp->rs[i]);
     }
 
