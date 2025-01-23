@@ -136,6 +136,7 @@ class Topp {
     auto lastMicros = std::chrono::duration_cast<std::chrono::microseconds>(
                           now.time_since_epoch())
                           .count();
+    auto beginTime = lastMicros;
 
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
@@ -163,7 +164,7 @@ class Topp {
       lastMicros = micros;
     }
 
-    log_info("TOPP problem solved.");
+    log_info("TOPP problem solved, total duration: %3d.%3dms.", (lastMicros - beginTime) / 1000, (lastMicros - beginTime) % 1000);
   }
 
   int getIter() { return iter; }
@@ -171,11 +172,11 @@ class Topp {
     return loss(this, x, g);
   }
   void getStates(std::vector<ArmTrajectoryState>& states) {
-    Eigen::VectorXd ak = x.segment(0, n);
-    Eigen::VectorXd bk = x.segment(n, n + 1);
-    Eigen::VectorXd ck = x.segment(2 * n + 1, n + 1);
-    Eigen::VectorXd dk = x.segment(3 * n + 2, n);
-    Eigen::VectorXd ek = x.segment(4 * n + 2, n + 1);
+    Eigen::VectorXd ak = x.segment(getA(0), lenA());
+    Eigen::VectorXd bk = x.segment(getB(0), lenB());
+    Eigen::VectorXd ck = x.segment(getC(0), lenC());
+    Eigen::VectorXd dk = x.segment(getD(0), lenD());
+    Eigen::VectorXd ek = x.segment(getE(0), lenE());
 
     states.clear();
     ArmTrajectoryState state;
@@ -263,7 +264,7 @@ class Topp {
      */
     f = Eigen::SparseVector<double>(n_var);
     for (int i = 0; i < n; ++i) {
-      f.insert(3 * n + 2 + i) = 2 * arc(i);
+      f.insert(getD(i)) = 2 * arc(i);
     }
     log_debug("Setting up TOPP problem[4/] linear coefficients initialized.");
 
@@ -285,9 +286,9 @@ class Topp {
     for (int i = 0; i <= n; ++i) {
       Eigen::SparseMatrix<double> A_(3, n_var);
       Eigen::SparseVector<double> b_(3);
-      A_.insert(0, n + i) = 1;          // b_k
-      A_.insert(1, 2 * n + 1 + i) = 2;  // c_k
-      A_.insert(2, n + i) = 1;          // b_k
+      A_.insert(0, getB(i)) = 1;  // b_k
+      A_.insert(1, getC(i)) = 2;  // c_k
+      A_.insert(2, getB(i)) = 1;  // b_k
       b_.insert(0) = 1;
       b_.insert(2) = -1;
       As.push_back(A_);
@@ -306,12 +307,12 @@ class Topp {
     for (int i = 0; i < n; ++i) {
       Eigen::SparseMatrix<double> A_(3, n_var);
       Eigen::SparseVector<double> b_(3);
-      A_.insert(0, 2 * n + 1 + i) = 1;   // c_k
-      A_.insert(0, 2 * n + 2 + i) = 1;   // c_{k+1}
-      A_.insert(0, 3 * n + 2 + i) = 1;   // d_k
-      A_.insert(2, 2 * n + 1 + i) = 1;   // c_k
-      A_.insert(2, 2 * n + 2 + i) = 1;   // c_{k+1}
-      A_.insert(2, 3 * n + 2 + i) = -1;  // d_k
+      A_.insert(0, getC(i)) = 1;      // c_k
+      A_.insert(0, getC(i + 1)) = 1;  // c_{k+1}
+      A_.insert(0, getD(i)) = 1;      // d_k
+      A_.insert(2, getC(i)) = 1;      // c_k
+      A_.insert(2, getC(i + 1)) = 1;  // c_{k+1}
+      A_.insert(2, getD(i)) = -1;     // d_k
       b_.insert(1) = 2;
       As.push_back(A_);
       bs.push_back(b_);
@@ -330,9 +331,9 @@ class Topp {
      * 2(s_{k+1} - s_k) * a_k + b_k - b_{k+1} = 0
      */
     for (int i = 0; i < n; ++i) {
-      G.insert(i, i) = 2 * arc(i);  // 2(s_{k+1} - s_k)
-      G.insert(i, n + i) = 1;       // b_k
-      G.insert(i, n + i + 1) = -1;  // b_{k+1}
+      G.insert(i, getA(i)) = 2 * arc(i);  // 2(s_{k+1} - s_k)
+      G.insert(i, getB(i)) = 1;           // b_k
+      G.insert(i, getB(i + 1)) = -1;      // b_{k+1}
     }
 
     /**
@@ -342,10 +343,10 @@ class Topp {
      * e_0 = 0
      * e_n = 0
      */
-    G.insert(n, n) = 1;              // b_0
-    G.insert(n + 1, 2 * n) = 1;      // b_n
-    G.insert(n + 2, 4 * n + 2) = 1;  // e_0
-    G.insert(n + 3, 5 * n + 2) = 1;  // e_n
+    G.insert(n, getB(0)) = 1;               // b_0
+    G.insert(n + 1, getB(lenB() - 1)) = 1;  // b_n
+    G.insert(n + 2, getE(0)) = 1;           // e_0
+    G.insert(n + 3, getE(lenB() - 1)) = 1;  // e_n
 
     log_debug("Setting up TOPP problem[6/] linear equality constraints initialized.");
 
@@ -361,7 +362,7 @@ class Topp {
      * -b_k <= 0
      */
     for (int i = 0; i <= n; ++i) {
-      P.insert(i, n + i) = -1;  // b_k
+      P.insert(i, getB(i)) = -1;  // b_k
     }  // end at n
 
     /**
@@ -370,8 +371,8 @@ class Topp {
      * q'_r(s_k)^2 * b_k <= vr_max^2
      */
     for (int i = 0; i <= n; ++i) {
-      P.insert(n + 1 + 2 * i, n + i) = qt1(i) * qt1(i);  // b_k
-      P.insert(n + 2 + 2 * i, n + i) = qr1(i) * qr1(i);  // b_k
+      P.insert(n + 1 + 2 * i, getB(i)) = qt1(i) * qt1(i);  // b_k
+      P.insert(n + 2 + 2 * i, getB(i)) = qr1(i) * qr1(i);  // b_k
       q.insert(n + 1 + 2 * i) = ELEVATOR_VMAX * ELEVATOR_VMAX;
       q.insert(n + 2 + 2 * i) = ARM_VMAX * ARM_VMAX;
     }  // end at 3n+2
@@ -384,14 +385,14 @@ class Topp {
      * -q''_r(s_k)^2 * b_k - q'_r(s_k) * a_k <= ar_max
      */
     for (int i = 0; i < n; ++i) {
-      P.insert(3 * n + 3 + 4 * i, n + i) = qt2(i) * qt2(i);   // b_k
-      P.insert(3 * n + 4 + 4 * i, n + i) = -qt2(i) * qt2(i);  // b_k
-      P.insert(3 * n + 5 + 4 * i, n + i) = qr2(i) * qr2(i);   // b_k
-      P.insert(3 * n + 6 + 4 * i, n + i) = -qr2(i) * qr2(i);  // b_k
-      P.insert(3 * n + 3 + 4 * i, i) = qt1(i);                // a_k
-      P.insert(3 * n + 4 + 4 * i, i) = -qt1(i);               // a_k
-      P.insert(3 * n + 5 + 4 * i, i) = qr1(i);                // a_k
-      P.insert(3 * n + 6 + 4 * i, i) = -qr1(i);               // a_k
+      P.insert(3 * n + 3 + 4 * i, getB(i)) = qt2(i) * qt2(i);   // b_k
+      P.insert(3 * n + 4 + 4 * i, getB(i)) = -qt2(i) * qt2(i);  // b_k
+      P.insert(3 * n + 5 + 4 * i, getB(i)) = qr2(i) * qr2(i);   // b_k
+      P.insert(3 * n + 6 + 4 * i, getB(i)) = -qr2(i) * qr2(i);  // b_k
+      P.insert(3 * n + 3 + 4 * i, getA(i)) = qt1(i);            // a_k
+      P.insert(3 * n + 4 + 4 * i, getA(i)) = -qt1(i);           // a_k
+      P.insert(3 * n + 5 + 4 * i, getA(i)) = qr1(i);            // a_k
+      P.insert(3 * n + 6 + 4 * i, getA(i)) = -qr1(i);           // a_k
       q.insert(3 * n + 3 + 4 * i) = ELEVATOR_AMAX;
       q.insert(3 * n + 4 + 4 * i) = ELEVATOR_AMAX;
       q.insert(3 * n + 5 + 4 * i) = ARM_AMAX;
@@ -406,18 +407,18 @@ class Topp {
      * -Kv * q'_r(s_k) * e_k - Ka * q''_r(s_k) * a_k - Ka * q'_r(s_k) * b_k <= V_max
      */
     for (int i = 0; i < n; ++i) {
-      P.insert(7 * n + 3 + 4 * i, 4 * n + 2 + i) = ELEVATOR_Kv * qt1(i);   // e_k
-      P.insert(7 * n + 4 + 4 * i, 4 * n + 2 + i) = -ELEVATOR_Kv * qt1(i);  // e_k
-      P.insert(7 * n + 5 + 4 * i, 4 * n + 2 + i) = ARM_Kv * qr1(i);        // e_k
-      P.insert(7 * n + 6 + 4 * i, 4 * n + 2 + i) = -ARM_Kv * qr1(i);       // e_k
-      P.insert(7 * n + 3 + 4 * i, i) = ARM_Ka * qt2(i);                    // a_k
-      P.insert(7 * n + 4 + 4 * i, i) = -ARM_Ka * qt2(i);                   // a_k
-      P.insert(7 * n + 5 + 4 * i, i) = ELEVATOR_Ka * qr2(i);               // a_k
-      P.insert(7 * n + 6 + 4 * i, i) = -ELEVATOR_Ka * qr2(i);              // a_k
-      P.insert(7 * n + 3 + 4 * i, n + i) = ELEVATOR_Ka * qt1(i);           // b_k
-      P.insert(7 * n + 4 + 4 * i, n + i) = -ELEVATOR_Ka * qt1(i);          // b_k
-      P.insert(7 * n + 5 + 4 * i, n + i) = ARM_Ka * qr1(i);                // b_k
-      P.insert(7 * n + 6 + 4 * i, n + i) = -ARM_Ka * qr1(i);               // b_k
+      P.insert(7 * n + 3 + 4 * i, getE(i)) = ELEVATOR_Kv * qt1(i);   // e_k
+      P.insert(7 * n + 4 + 4 * i, getE(i)) = -ELEVATOR_Kv * qt1(i);  // e_k
+      P.insert(7 * n + 5 + 4 * i, getE(i)) = ARM_Kv * qr1(i);        // e_k
+      P.insert(7 * n + 6 + 4 * i, getE(i)) = -ARM_Kv * qr1(i);       // e_k
+      P.insert(7 * n + 3 + 4 * i, getA(i)) = ARM_Ka * qt2(i);        // a_k
+      P.insert(7 * n + 4 + 4 * i, getA(i)) = -ARM_Ka * qt2(i);       // a_k
+      P.insert(7 * n + 5 + 4 * i, getA(i)) = ELEVATOR_Ka * qr2(i);   // a_k
+      P.insert(7 * n + 6 + 4 * i, getA(i)) = -ELEVATOR_Ka * qr2(i);  // a_k
+      P.insert(7 * n + 3 + 4 * i, getB(i)) = ELEVATOR_Ka * qt1(i);   // b_k
+      P.insert(7 * n + 4 + 4 * i, getB(i)) = -ELEVATOR_Ka * qt1(i);  // b_k
+      P.insert(7 * n + 5 + 4 * i, getB(i)) = ARM_Ka * qr1(i);        // b_k
+      P.insert(7 * n + 6 + 4 * i, getB(i)) = -ARM_Ka * qr1(i);       // b_k
       q.insert(7 * n + 3 + 4 * i) = ELEVATOR_MAX_VOLTAGE;
       q.insert(7 * n + 4 + 4 * i) = ELEVATOR_MAX_VOLTAGE;
       q.insert(7 * n + 5 + 4 * i) = ARM_MAX_VOLTAGE;
@@ -438,8 +439,8 @@ class Topp {
     for (int i = 0; i <= n; ++i) {
       Eigen::SparseMatrix<double> J_(n_var, n_var);
       Eigen::SparseVector<double> r_(n_var);
-      J_.insert(4 * n + 2 + i, 4 * n + 2 + i) = 1;  // e_k
-      r_.insert(n + i) = 1;                         // b_k
+      J_.insert(getE(i), getE(i)) = 1;  // e_k
+      r_.insert(getB(i)) = 1;           // b_k
       Js.push_back(J_);
       rs.push_back(r_);
     }
@@ -486,5 +487,32 @@ class Topp {
     }
 
     return res;
+  }
+
+  inline int lenA() { return n; }
+  inline int lenB() { return n + 1; }
+  inline int lenC() { return n + 1; }
+  inline int lenD() { return n; }
+  inline int lenE() { return n + 1; }
+
+  inline int getA(int i) {
+    assert(i >= 0 && i < lenA());
+    return i;
+  }
+  inline int getB(int i) {
+    assert(i >= 0 && i < lenB());
+    return n + i;
+  }
+  inline int getC(int i) {
+    assert(i >= 0 && i < lenC());
+    return 2 * n + 1 + i;
+  }
+  inline int getD(int i) {
+    assert(i >= 0 && i < lenD());
+    return 3 * n + 2 + i;
+  }
+  inline int getE(int i) {
+    assert(i >= 0 && i < lenE());
+    return 4 * n + 2 + i;
   }
 };
