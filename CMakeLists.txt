@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/libs
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/sys
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
 )
 
 find_package(Eigen3 REQUIRED)
@@ -37,3 +37,13 @@ target_link_libraries(Cyber_Planner
     trajectory_native_proto
     Eigen3::Eigen
 )
+
+add_executable(test
+    src/test.cpp
+    ${HEADER_FILES}
+)
+
+target_compile_features(test PRIVATE cxx_std_11)
+find_package(Python COMPONENTS Development NumPy REQUIRED)
+target_include_directories(test PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+target_link_libraries(test PRIVATE Python::Python Python::NumPy)

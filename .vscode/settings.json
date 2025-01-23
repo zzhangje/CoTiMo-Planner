@@ -69,7 +69,8 @@
         "variant": "cpp",
         "codecvt": "cpp",
         "csignal": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "any": "cpp"
     },
     "C_Cpp.clang_format_style": "{ BasedOnStyle: Google, IndentWidth: 2, ColumnLimit: 0 }"
 }

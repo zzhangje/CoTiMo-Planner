@@ -48,9 +48,7 @@ int main(int argc, char **argv) {
 
   std::vector<std::vector<double>> map;
   std::vector<Eigen::Vector2i> path, visited, samplePath;
-  Object env = Object();
-  Object arm = Object(false, false, false);
-  getGridMap(env, arm, map);
+  getGridMap(ObjectType::ARM, map);
   astar::astar(map, Eigen::Vector2i(0, 0), Eigen::Vector2i(60, 20), path, visited);
   // astar::samplePath(path, samplePath, 3);
 
