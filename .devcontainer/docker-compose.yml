@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   cyber-planner:
     build:
@@ -5,5 +7,14 @@ services:
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ../..:/workspaces:cached
+      - vcpkg_cache:/vcpkg/downloads
+      - ccache_data:/ccache
+    environment:
+      - VCPKG_ROOT=/vcpkg
+      - CCACHE_DIR=/ccache
     network_mode: host
     command: sleep infinity
+
+volumes:
+  vcpkg_cache:
+  ccache_data:
