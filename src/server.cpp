@@ -8,6 +8,7 @@
 
 #include "Object.hpp"
 #include "Topp.hpp"
+#include "Toppp.hpp"
 #include "astar.hpp"
 #include "log.hpp"
 #include "map.hpp"
@@ -56,6 +57,11 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i) {
     points.push_back(Eigen::Vector2d(i, i));
   }
+  Toppp toppp(points);
+  for (int i = 0; i < 30; ++i) {
+    toppp.step();
+  }
+
   Topp topp(points);
 
   while (!signalStatus) {

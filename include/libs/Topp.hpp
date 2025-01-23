@@ -1,3 +1,6 @@
+#ifndef TOPP_HPP
+#define TOPP_HPP
+
 #include <chrono>
 #include <cmath>
 #include <eigen3/Eigen/Eigen>
@@ -12,7 +15,7 @@
 #include "spline.hpp"
 
 #define BETA 1e3
-#define GAMMA .1
+#define GAMMA .2
 
 using com::nextinnovation::armtrajectoryservice::ArmCurrentState;
 using com::nextinnovation::armtrajectoryservice::ArmPositionState;
@@ -112,15 +115,13 @@ class Topp {
   std::vector<Eigen::VectorXd> mus;
 
  public:
-  Topp(const std::vector<Eigen::Vector2d>& points, bool solve = true,
+  Topp(const std::vector<Eigen::Vector2d>& points,
        int maxIter = 30) {
     this->points = points;
     this->n = points.size() - 1;
     this->iter = 0;
     this->setup();
-    if (solve) {
-      this->solve(maxIter);
-    }
+    this->solve(maxIter);
   }
 
   void solve(int maxIter = 30) {
@@ -141,8 +142,12 @@ class Topp {
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
       lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
+      std::cout << x.segment(0, n).transpose() << std::endl;
+      std::cout << x.segment(n, n + 1).transpose() << std::endl;
+      std::cout << x.segment(2 * n + 1, n + 1).transpose() << std::endl;
+      std::cout << x.segment(3 * n + 2, n).transpose() << std::endl;
+      std::cout << x.segment(4 * n + 2, n + 1).transpose() << std::endl;
 
-      // now = std::chrono::high_resolution_clock::now();
       now = std::chrono::steady_clock::now();
       auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
                         now.time_since_epoch())
@@ -153,7 +158,7 @@ class Topp {
 
       // update dual variables
       for (int i = 0; i < n_soc; ++i) {
-        mus[i] = socProjection(mus[i] / rho - As[i] * x - bs[i]);
+        mus[i] = socProjection(mus[i] - rho * (As[i] * x + bs[i]));
       }
       lambda = lambda + rho * (G * x - h);
       eta = max(eta + rho * (P * x - q), 0);
@@ -255,6 +260,7 @@ class Topp {
     // initialize optimization variables
     n_var = 5 * n + 3;
     x = Eigen::VectorXd::Zero(n_var);
+    // x = Eigen::VectorXd::Random(n_var);
     g = Eigen::VectorXd::Zero(n_var);
     log_debug("Setting up TOPP problem[3/] optimization variables initialized.");
 
@@ -353,7 +359,7 @@ class Topp {
     /**
      * initialize linear inequality constraints
      */
-    n_ineq = 11 * n + 3;
+    n_ineq = 12 * n + 4;
     P = Eigen::SparseMatrix<double>(n_ineq, n_var);
     q = Eigen::SparseVector<double>(n_ineq);
 
@@ -425,6 +431,14 @@ class Topp {
       q.insert(7 * n + 6 + 4 * i) = ARM_MAX_VOLTAGE;
     }  // end at 11n+2
 
+    /**
+     * always forward
+     * -e_k <= 0
+     */
+    for (int i = 0; i <= n; ++i) {
+      P.insert(11 * n + 3 + i, getE(i)) = -1;  // e_k
+    }  // end at 12n+2
+
     log_debug("Setting up TOPP problem[7/] linear inequality constraints initialized.");
 
     /**
@@ -463,7 +477,7 @@ class Topp {
     optG = topp->f;
 
     // linear equality constraints
-    Eigen::VectorXd resEq = topp->G * optX - topp->h - topp->lambda / topp->rho;
+    Eigen::VectorXd resEq = topp->G * optX - topp->h + topp->lambda / topp->rho;
     res += topp->rho / 2 * resEq.squaredNorm();
     optG += topp->rho * topp->G.transpose() * resEq;
 
@@ -476,14 +490,14 @@ class Topp {
     for (int i = 0; i < topp->n_soc; ++i) {
       Eigen::VectorXd resSoc = socProjection(topp->mus[i] / topp->rho - topp->As[i] * optX - topp->bs[i]);
       res += topp->rho / 2 * resSoc.squaredNorm();
-      optG += topp->rho * topp->As[i].transpose() * resSoc;
+      optG -= topp->rho * topp->As[i].transpose() * resSoc;
     }
 
     // quadratic equality constraints
     for (int i = 0; i < topp->n_quadeq; ++i) {
       double resQuadeq = (optX.transpose() * topp->Js[i]).dot(optX) - topp->rs[i].dot(optX);
-      res += topp->rho / 2 * resQuadeq * resQuadeq;
-      optG += topp->rho * (2 * topp->Js[i] * optX - topp->rs[i]);
+      res += 1e3 / 2 * resQuadeq * resQuadeq;
+      optG += topp->rho * resQuadeq * (2 * topp->Js[i] * optX - topp->rs[i]);
     }
 
     return res;
@@ -516,3 +530,5 @@ class Topp {
     return 4 * n + 2 + i;
   }
 };
+
+#endif
