@@ -5,8 +5,6 @@
 
 #include "config.h"
 
-using namespace config::dynamic;
-
 namespace astar {
 bool astar(const std::vector<std::vector<bool>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,

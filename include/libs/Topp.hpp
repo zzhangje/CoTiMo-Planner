@@ -10,7 +10,6 @@
 #include "lbfgs.hpp"
 #include "log.hpp"
 #include "spline.hpp"
-#include "utils.hpp"
 
 #define BETA 1e3
 #define GAMMA .1
@@ -18,6 +17,33 @@
 using com::nextinnovation::armtrajectoryservice::ArmCurrentState;
 using com::nextinnovation::armtrajectoryservice::ArmPositionState;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryState;
+
+Eigen::VectorXd max(const Eigen::VectorXd& v, const double num) {
+  Eigen::VectorXd res = v;
+  for (int i = 0; i < v.rows(); ++i) {
+    res(i) = std::max(num, v(i));
+  }
+  return res;
+}
+
+Eigen::VectorXd socProjection(const Eigen::VectorXd& v) {
+  if (v.rows() == 1) {
+    return v;
+  }
+  double v0 = v(0);
+  Eigen::VectorXd v1 = v.tail(v.rows() - 1);
+  if (v0 > v1.norm()) {
+    return v;
+  } else if (v0 < -v1.norm()) {
+    return Eigen::VectorXd::Zero(v.rows());
+  } else {
+    Eigen::VectorXd Pk = Eigen::VectorXd::Zero(v.rows());
+    Pk(0) = v1.norm();
+    Pk.tail(v.rows() - 1) = v1;
+    Pk *= (v0 + v1.norm()) / 2 / v1.norm();
+    return Pk;
+  }
+}
 
 class Topp {
  private:
@@ -157,8 +183,8 @@ class Topp {
 
     position.set_shoulderheightmeter(points[0].x());
     position.set_elbowpositiondegree(points[0].y() / M_PI * 180);
-    current.set_shouldercurrentamp(alphabot::ELEVATOR_Kv * qt1(0) * ek(0) + alphabot::ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)));
-    current.set_elbowcurrentamp(alphabot::ARM_Kv * qr1(0) * ek(0) + alphabot::ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0)));
+    current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(0) * ek(0) + ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)));
+    current.set_elbowcurrentamp(ARM_Kv * qr1(0) * ek(0) + ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0)));
     state.set_timestamp(0);
     state.set_allocated_position(&position);
     state.set_allocated_current(&current);
@@ -167,8 +193,8 @@ class Topp {
     for (int i = 1; i < n; ++i) {
       position.set_shoulderheightmeter(points[i].x());
       position.set_elbowpositiondegree(points[i].y() / M_PI * 180);
-      current.set_shouldercurrentamp(alphabot::ELEVATOR_Kv * qt1(i) * ek(i) + alphabot::ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
-      current.set_elbowcurrentamp(alphabot::ARM_Kv * qr1(i) * ek(i) + alphabot::ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
+      current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(i) * ek(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
+      current.set_elbowcurrentamp(ARM_Kv * qr1(i) * ek(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
       state.set_timestamp(arc(i - 1) * 2 / (ek(i) + ek(i - 1)));
       state.set_allocated_position(&position);
       state.set_allocated_current(&current);
@@ -177,8 +203,8 @@ class Topp {
 
     position.set_shoulderheightmeter(points[n].x());
     position.set_elbowpositiondegree(points[n].y() / M_PI * 180);
-    current.set_shouldercurrentamp(alphabot::ELEVATOR_Kv * qt1(n) * ek(n) + alphabot::ELEVATOR_Ka * qt1(n) * bk(n));
-    current.set_elbowcurrentamp(alphabot::ARM_Kv * qr1(n) * ek(n) + alphabot::ARM_Ka * qr1(n) * bk(n));
+    current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(n) * ek(n) + ELEVATOR_Ka * qt1(n) * bk(n));
+    current.set_elbowcurrentamp(ARM_Kv * qr1(n) * ek(n) + ARM_Ka * qr1(n) * bk(n));
     state.set_timestamp(arc(n - 1) * 2 / (ek(n) + ek(n - 1)));
     state.set_allocated_position(&position);
     state.set_allocated_current(&current);
@@ -345,8 +371,8 @@ class Topp {
     for (int i = 0; i <= n; ++i) {
       P.insert(n + 1 + 2 * i, n + i) = qt1(i) * qt1(i);  // b_k
       P.insert(n + 2 + 2 * i, n + i) = qr1(i) * qr1(i);  // b_k
-      q.insert(n + 1 + 2 * i) = alphabot::ELEVATOR_VMAX * alphabot::ELEVATOR_VMAX;
-      q.insert(n + 2 + 2 * i) = alphabot::ARM_VMAX * alphabot::ARM_VMAX;
+      q.insert(n + 1 + 2 * i) = ELEVATOR_VMAX * ELEVATOR_VMAX;
+      q.insert(n + 2 + 2 * i) = ARM_VMAX * ARM_VMAX;
     }  // end at 3n+2
 
     /**
@@ -365,10 +391,10 @@ class Topp {
       P.insert(3 * n + 4 + 4 * i, i) = -qt1(i);               // a_k
       P.insert(3 * n + 5 + 4 * i, i) = qr1(i);                // a_k
       P.insert(3 * n + 6 + 4 * i, i) = -qr1(i);               // a_k
-      q.insert(3 * n + 3 + 4 * i) = alphabot::ELEVATOR_AMAX;
-      q.insert(3 * n + 4 + 4 * i) = alphabot::ELEVATOR_AMAX;
-      q.insert(3 * n + 5 + 4 * i) = alphabot::ARM_AMAX;
-      q.insert(3 * n + 6 + 4 * i) = alphabot::ARM_AMAX;
+      q.insert(3 * n + 3 + 4 * i) = ELEVATOR_AMAX;
+      q.insert(3 * n + 4 + 4 * i) = ELEVATOR_AMAX;
+      q.insert(3 * n + 5 + 4 * i) = ARM_AMAX;
+      q.insert(3 * n + 6 + 4 * i) = ARM_AMAX;
     }  // end at 7n+2
 
     /**
@@ -379,22 +405,22 @@ class Topp {
      * -Kv * q'_r(s_k) * e_k - Ka * q''_r(s_k) * a_k - Ka * q'_r(s_k) * b_k <= V_max
      */
     for (int i = 0; i < n; ++i) {
-      P.insert(7 * n + 3 + 4 * i, 4 * n + 2 + i) = alphabot::ELEVATOR_Kv * qt1(i);   // e_k
-      P.insert(7 * n + 4 + 4 * i, 4 * n + 2 + i) = -alphabot::ELEVATOR_Kv * qt1(i);  // e_k
-      P.insert(7 * n + 5 + 4 * i, 4 * n + 2 + i) = alphabot::ARM_Kv * qr1(i);        // e_k
-      P.insert(7 * n + 6 + 4 * i, 4 * n + 2 + i) = -alphabot::ARM_Kv * qr1(i);       // e_k
-      P.insert(7 * n + 3 + 4 * i, i) = alphabot::ARM_Ka * qt2(i);                    // a_k
-      P.insert(7 * n + 4 + 4 * i, i) = -alphabot::ARM_Ka * qt2(i);                   // a_k
-      P.insert(7 * n + 5 + 4 * i, i) = alphabot::ELEVATOR_Ka * qr2(i);               // a_k
-      P.insert(7 * n + 6 + 4 * i, i) = -alphabot::ELEVATOR_Ka * qr2(i);              // a_k
-      P.insert(7 * n + 3 + 4 * i, n + i) = alphabot::ELEVATOR_Ka * qt1(i);           // b_k
-      P.insert(7 * n + 4 + 4 * i, n + i) = -alphabot::ELEVATOR_Ka * qt1(i);          // b_k
-      P.insert(7 * n + 5 + 4 * i, n + i) = alphabot::ARM_Ka * qr1(i);                // b_k
-      P.insert(7 * n + 6 + 4 * i, n + i) = -alphabot::ARM_Ka * qr1(i);               // b_k
-      q.insert(7 * n + 3 + 4 * i) = alphabot::ELEVATOR_MAX_VOLTAGE;
-      q.insert(7 * n + 4 + 4 * i) = alphabot::ELEVATOR_MAX_VOLTAGE;
-      q.insert(7 * n + 5 + 4 * i) = alphabot::ARM_MAX_VOLTAGE;
-      q.insert(7 * n + 6 + 4 * i) = alphabot::ARM_MAX_VOLTAGE;
+      P.insert(7 * n + 3 + 4 * i, 4 * n + 2 + i) = ELEVATOR_Kv * qt1(i);   // e_k
+      P.insert(7 * n + 4 + 4 * i, 4 * n + 2 + i) = -ELEVATOR_Kv * qt1(i);  // e_k
+      P.insert(7 * n + 5 + 4 * i, 4 * n + 2 + i) = ARM_Kv * qr1(i);        // e_k
+      P.insert(7 * n + 6 + 4 * i, 4 * n + 2 + i) = -ARM_Kv * qr1(i);       // e_k
+      P.insert(7 * n + 3 + 4 * i, i) = ARM_Ka * qt2(i);                    // a_k
+      P.insert(7 * n + 4 + 4 * i, i) = -ARM_Ka * qt2(i);                   // a_k
+      P.insert(7 * n + 5 + 4 * i, i) = ELEVATOR_Ka * qr2(i);               // a_k
+      P.insert(7 * n + 6 + 4 * i, i) = -ELEVATOR_Ka * qr2(i);              // a_k
+      P.insert(7 * n + 3 + 4 * i, n + i) = ELEVATOR_Ka * qt1(i);           // b_k
+      P.insert(7 * n + 4 + 4 * i, n + i) = -ELEVATOR_Ka * qt1(i);          // b_k
+      P.insert(7 * n + 5 + 4 * i, n + i) = ARM_Ka * qr1(i);                // b_k
+      P.insert(7 * n + 6 + 4 * i, n + i) = -ARM_Ka * qr1(i);               // b_k
+      q.insert(7 * n + 3 + 4 * i) = ELEVATOR_MAX_VOLTAGE;
+      q.insert(7 * n + 4 + 4 * i) = ELEVATOR_MAX_VOLTAGE;
+      q.insert(7 * n + 5 + 4 * i) = ARM_MAX_VOLTAGE;
+      q.insert(7 * n + 6 + 4 * i) = ARM_MAX_VOLTAGE;
     }  // end at 11n+2
 
     log_debug("Setting up TOPP problem[7/] linear inequality constraints initialized.");
@@ -427,36 +453,6 @@ class Topp {
 
     log_info("TOPP problem set up.");
   }
-
-  /**
-   * @deprecated too slow
-   */
-  // static double loss(void* instance, const Eigen::VectorXd& optX,
-  //                    Eigen::VectorXd& optG) {
-  //   Topp* self = static_cast<Topp*>(instance);
-
-  //   // x^T * Js * x - rs * x
-  //   std::vector<double> resQuadeqs = optX.transpose() * self->Js * optX - transpose(self->rs) * optX;
-  //   // Pk(mu / rho - As * x - bs)
-  //   std::vector<Eigen::VectorXd> resSocs = socProjections(self->mus / self->rho - self->As * optX - self->bs);
-  //   // G * x - h + lambda / rho
-  //   Eigen::VectorXd resEq = self->G * optX - self->h + self->lambda / self->rho;
-  //   // max[P * x - q + eta / rho, 0]
-  //   Eigen::VectorXd resIneq = max(self->P * optX - self->q + self->eta / self->rho, 0);
-
-  //   optG = self->f;
-  //   // G^T * (G * x - h + lambda / rho)
-  //   optG += self->rho * self->G.transpose() * resEq;
-  //   // p^T * max[P * x - q + eta / rho, 0]
-  //   optG += self->rho * self->P.transpose() * resIneq;
-  //   // As^T * Pk(mu / rho - As * x - bs)
-  //   optG += self->rho * sum(transpose(self->As) * resSocs);
-  //   // x^T * Js * x * Js * x - Js * x * rs^T - x^T * Js * rs^T + rs^T * x * rs
-  //   optG += self->rho *
-  //           sum(resQuadeqs * (2 * self->Js * optX - self->rs));
-
-  //   return self->f.dot(optX) + self->rho / 2 * (sum(resQuadeqs) + sum(squaredNorm(resSocs)) + resEq.squaredNorm() + resIneq.squaredNorm());
-  // }
 
   static double loss(void* instance, const Eigen::VectorXd& optX,
                      Eigen::VectorXd& optG) {

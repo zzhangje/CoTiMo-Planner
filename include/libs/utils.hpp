@@ -3,25 +3,6 @@
 
 #include <eigen3/Eigen/Eigen>
 
-Eigen::VectorXd socProjection(const Eigen::VectorXd& v) {
-  if (v.rows() == 1) {
-    return v;
-  }
-  double v0 = v(0);
-  Eigen::VectorXd v1 = v.tail(v.rows() - 1);
-  if (v0 > v1.norm()) {
-    return v;
-  } else if (v0 < -v1.norm()) {
-    return Eigen::VectorXd::Zero(v.rows());
-  } else {
-    Eigen::VectorXd Pk = Eigen::VectorXd::Zero(v.rows());
-    Pk(0) = v1.norm();
-    Pk.tail(v.rows() - 1) = v1;
-    Pk *= (v0 + v1.norm()) / 2 / v1.norm();
-    return Pk;
-  }
-}
-
 std::vector<Eigen::VectorXd> socProjections(
     const std::vector<Eigen::VectorXd>& v) {
   std::vector<Eigen::VectorXd> res;
@@ -54,14 +35,6 @@ Eigen::VectorXd sum(std::vector<Eigen::VectorXd> vector) {
   Eigen::VectorXd res = vector[0];
   for (int i = 1; i < vector.size(); ++i) {
     res += vector[i];
-  }
-  return res;
-}
-
-Eigen::VectorXd max(const Eigen::VectorXd& v, const double num) {
-  Eigen::VectorXd res = v;
-  for (int i = 0; i < v.rows(); ++i) {
-    res(i) = std::max(num, v(i));
   }
   return res;
 }
