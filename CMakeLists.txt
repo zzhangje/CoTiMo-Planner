@@ -7,8 +7,10 @@ endif()
 
 project(Cyber-Planner)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+add_definitions(-D_USE_MATH_DEFINES)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -38,6 +40,8 @@ add_executable(Cyber_Planner
     src/server.cpp
     ${HEADER_FILES}
 )
+
+target_include_directories(Cyber_Planner PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
 
 target_link_libraries(Cyber_Planner
     trajectory_native_proto

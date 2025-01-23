@@ -127,8 +127,7 @@ class Topp {
 
     double cost;
 
-    auto now = std::chrono::high_resolution_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    auto now = std::chrono::steady_clock::now();
     auto lastMillis = std::chrono::duration_cast<std::chrono::milliseconds>(
                           now.time_since_epoch())
                           .count();
@@ -140,8 +139,7 @@ class Topp {
       this->iter++;
       lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
 
-      now = std::chrono::high_resolution_clock::now();
-      time_t_now = std::chrono::system_clock::to_time_t(now);
+      now = std::chrono::steady_clock::now();
       auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
                         now.time_since_epoch())
                         .count();

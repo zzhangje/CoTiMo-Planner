@@ -127,7 +127,11 @@ void log_set_quiet(bool enable) {
 int log_add_callback(log_LogFn fn, void *udata, int level) {
   for (int i = 0; i < MAX_CALLBACKS; i++) {
     if (!L.callbacks[i].fn) {
-      L.callbacks[i] = (Callback){fn, udata, level};
+      Callback cb;
+      cb.fn = fn;
+      cb.udata = udata;
+      cb.level = level;
+      L.callbacks[i] = cb;
       return 0;
     }
   }
@@ -147,12 +151,12 @@ static void init_event(log_Event *ev, void *udata) {
 }
 
 void log_log(int level, const char *file, int line, const char *fmt, ...) {
-  log_Event ev = {
-      .fmt = fmt,
-      .file = file,
-      .line = line,
-      .level = level,
-  };
+  log_Event ev;
+  ev.fmt = fmt;
+  ev.file = file;
+  ev.line = line;
+  ev.level = level;
+  ev.time = nullptr;
 
   lock();
 
