@@ -1,4 +1,10 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.15)
+
+if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        CACHE STRING "")
+endif()
+
 project(Cyber-Planner)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -10,7 +16,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include/sys
 )
 
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(Threads)
