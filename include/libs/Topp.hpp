@@ -1,5 +1,8 @@
+#include <chrono>
 #include <cmath>
 #include <eigen3/Eigen/Eigen>
+#include <iostream>
+#include <thread>
 
 #include "config.h"
 #include "lbfgs.hpp"
@@ -91,9 +94,27 @@ class Topp {
 
     double cost;
 
+    auto now = std::chrono::high_resolution_clock::now();
+    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    auto lastMillis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          now.time_since_epoch())
+                          .count();
+    auto lastMicros = std::chrono::duration_cast<std::chrono::microseconds>(
+                          now.time_since_epoch())
+                          .count();
+
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
       lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
+
+      now = std::chrono::high_resolution_clock::now();
+      time_t_now = std::chrono::system_clock::to_time_t(now);
+      auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        now.time_since_epoch())
+                        .count();
+      auto micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                        now.time_since_epoch())
+                        .count();
 
       // update dual variables
       mus = socProjections(mus - rho * (As * x + bs));
@@ -101,8 +122,9 @@ class Topp {
       eta = max(eta + rho * (P * x - q), 0);
       rho = std::min(rho * (1 + GAMMA), BETA);
 
-      // TODO: output time consumed
-      log_debug("iter: %d, duration: %3d.%2dms, loss: %f", this->iter, 0, 0, cost);
+      log_debug("iter: %2d, duration: %3d.%3dms, loss: %f", this->iter, (millis - lastMillis) % 1000, (micros - lastMicros) % 1000, cost);
+      lastMillis = millis;
+      lastMicros = micros;
     }
 
     log_info("TOPP problem solved.");
@@ -347,30 +369,66 @@ class Topp {
     log_info("TOPP problem set up.");
   }
 
+  /**
+   * @deprecated too slow
+   */
+  // static double loss(void* instance, const Eigen::VectorXd& optX,
+  //                    Eigen::VectorXd& optG) {
+  //   Topp* self = static_cast<Topp*>(instance);
+
+  //   // x^T * Js * x - rs * x
+  //   std::vector<double> resQuadeqs = optX.transpose() * self->Js * optX - transpose(self->rs) * optX;
+  //   // Pk(mu / rho - As * x - bs)
+  //   std::vector<Eigen::VectorXd> resSocs = socProjections(self->mus / self->rho - self->As * optX - self->bs);
+  //   // G * x - h + lambda / rho
+  //   Eigen::VectorXd resEq = self->G * optX - self->h + self->lambda / self->rho;
+  //   // max[P * x - q + eta / rho, 0]
+  //   Eigen::VectorXd resIneq = max(self->P * optX - self->q + self->eta / self->rho, 0);
+
+  //   optG = self->f;
+  //   // G^T * (G * x - h + lambda / rho)
+  //   optG += self->rho * self->G.transpose() * resEq;
+  //   // p^T * max[P * x - q + eta / rho, 0]
+  //   optG += self->rho * self->P.transpose() * resIneq;
+  //   // As^T * Pk(mu / rho - As * x - bs)
+  //   optG += self->rho * sum(transpose(self->As) * resSocs);
+  //   // x^T * Js * x * Js * x - Js * x * rs^T - x^T * Js * rs^T + rs^T * x * rs
+  //   optG += self->rho *
+  //           sum(resQuadeqs * (2 * self->Js * optX - self->rs));
+
+  //   return self->f.dot(optX) + self->rho / 2 * (sum(resQuadeqs) + sum(squaredNorm(resSocs)) + resEq.squaredNorm() + resIneq.squaredNorm());
+  // }
+
   static double loss(void* instance, const Eigen::VectorXd& optX,
                      Eigen::VectorXd& optG) {
-    Topp* self = static_cast<Topp*>(instance);
+    Topp* topp = static_cast<Topp*>(instance);
+    double res = topp->f.dot(optX);
+    optG = topp->f;
 
-    // x^T * Js * x - rs * x
-    std::vector<double> resQuadeqs = optX.transpose() * self->Js * optX - transpose(self->rs) * optX;
-    // Pk(mu / rho - As * x - bs)
-    std::vector<Eigen::VectorXd> resSocs = socProjections(self->mus / self->rho - self->As * optX - self->bs);
-    // G * x - h - lambda / rho
-    Eigen::VectorXd resEq = self->G * optX - self->h - self->lambda / self->rho;
-    // max[P * x - q + eta / rho, 0]
-    Eigen::VectorXd resIneq = max(self->P * optX - self->q + self->eta / self->rho, 0);
+    // linear equality constraints
+    Eigen::VectorXd resEq = topp->G * optX - topp->h - topp->lambda / topp->rho;
+    res += topp->rho / 2 * resEq.squaredNorm();
+    optG += topp->rho * topp->G.transpose() * resEq;
 
-    optG = self->f;
-    // G^T * (G * x - h - lambda / rho)
-    optG += self->rho * self->G.transpose() * resEq;
-    // p^T * max[P * x - q + eta / rho, 0]
-    optG += self->rho * self->P.transpose() * resIneq;
-    // As^T * Pk(mu / rho - As * x - bs)
-    optG += self->rho * sum(transpose(self->As) * resSocs);
-    // x^T * Js * x * Js * x - Js * x * rs^T - x^T * Js * rs^T + rs^T * x * rs
-    optG += self->rho *
-            sum(resQuadeqs * (2 * self->Js * optX - self->rs));
+    // linear inequality constraints
+    Eigen::VectorXd resIneq = max(topp->P * optX - topp->q + topp->eta / topp->rho, 0);
+    res += topp->rho / 2 * resIneq.squaredNorm();
+    optG += topp->rho * topp->P.transpose() * resIneq;
 
-    return self->f.dot(optX) + self->rho / 2 * (sum(resQuadeqs) + sum(squaredNorm(resSocs)) + resEq.squaredNorm() + resIneq.squaredNorm());
+    // second order cone constraints
+    for (int i = 0; i < topp->n_soc; ++i) {
+      Eigen::VectorXd resSoc = socProjection(topp->mus[i] / topp->rho - topp->As[i] * optX - topp->bs[i]);
+      res += topp->rho / 2 * resSoc.squaredNorm();
+      optG += topp->rho * topp->As[i].transpose() * resSoc;
+    }
+
+    // quadratic equality constraints
+    for (int i = 0; i < topp->n_quadeq; ++i) {
+      double resQuadeq = (optX.transpose() * topp->Js[i]).dot(optX) - topp->rs[i].dot(optX);
+      res += topp->rho / 2 * resQuadeq * resQuadeq;
+      optG += topp->rho * (2 * topp->Js[i] * optX - topp->rs[i]);
+    }
+
+    return res;
   }
 };

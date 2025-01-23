@@ -44,13 +44,9 @@ int main(int argc, char **argv) {
   log_info("Cyber Planner 2025 is running, press Ctrl+C to exit.");
 
   std::vector<Eigen::Vector2d> points;
-  points.push_back(Eigen::Vector2d(0, 0));
-  points.push_back(Eigen::Vector2d(1, 1));
-  points.push_back(Eigen::Vector2d(2, 2));
-  points.push_back(Eigen::Vector2d(3, 3));
-  points.push_back(Eigen::Vector2d(4, 4));
-  points.push_back(Eigen::Vector2d(5, 5));
-
+  for (int i = 0; i < 10; i++) {
+    points.push_back(Eigen::Vector2d(i, i));
+  }
   Topp topp(points);
 
   while (!signalStatus) {
