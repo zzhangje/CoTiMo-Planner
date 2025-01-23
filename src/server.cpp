@@ -44,6 +44,7 @@ int main() {
   ServerBuilder builder;
   builder.AddListeningPort("0.0.0.0:50051", grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
+  log_info("Server is running on 0.0.0.0:50051");
   builder.BuildAndStart()->Wait();
   
   return 0;
