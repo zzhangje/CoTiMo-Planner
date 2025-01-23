@@ -1,10 +1,12 @@
 #include <grpcpp/grpcpp.h>
 
 #include <csignal>
+#include <eigen3/Eigen/Eigen>
 #include <iostream>
 #include <memory>
 #include <string>
 
+#include "Topp.hpp"
 #include "log.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
 
@@ -40,6 +42,16 @@ int main(int argc, char **argv) {
   std::signal(SIGINT, signalHandler);
 
   log_info("Cyber Planner 2025 is running, press Ctrl+C to exit.");
+
+  std::vector<Eigen::Vector2d> points;
+  points.push_back(Eigen::Vector2d(0, 0));
+  points.push_back(Eigen::Vector2d(1, 1));
+  points.push_back(Eigen::Vector2d(2, 2));
+  points.push_back(Eigen::Vector2d(3, 3));
+  points.push_back(Eigen::Vector2d(4, 4));
+  points.push_back(Eigen::Vector2d(5, 5));
+
+  Topp topp(points);
 
   while (!signalStatus) {
   }

@@ -87,7 +87,7 @@ class Topp {
   }
 
   void solve(int maxIter = 30) {
-    log_info("TOPP", "Solving TOPP problem...");
+    log_info("Solving TOPP problem...");
 
     double cost;
 
@@ -102,22 +102,22 @@ class Topp {
       rho = std::min(rho * (1 + GAMMA), BETA);
 
       // TODO: output time consumed
-      log_debug("TOPP", "iter: %d, cost: %f", this->iter, cost);
+      log_debug("iter: %d, duration: %3d.%2dms, loss: %f", this->iter, 0, 0, cost);
     }
 
-    log_info("TOPP", "TOPP problem solved.");
+    log_info("TOPP problem solved.");
   }
 
   int getIter() { return iter; }
   double getLoss() {
     return f.dot(x) +
-           rho / 2 * ((G * x - h - lambda / rho).squaredNorm() + squaredNorm(x.transpose() * Js * x - rs * x) + (max(P * x - q + eta / rho, 0)).squaredNorm() + sum(squaredNorm(socProjections(mus / rho - As * x - bs))));
+           rho / 2 * ((G * x - h - lambda / rho).squaredNorm() + squaredNorm(x.transpose() * Js * x - transpose(rs) * x) + (max(P * x - q + eta / rho, 0)).squaredNorm() + sum(squaredNorm(socProjections(mus / rho - As * x - bs))));
   }
   void get() {}
 
  private:
   void setup() {
-    log_info("TOPP", "Setting up TOPP problem...");
+    log_info("Setting up TOPP problem...");
 
     // get spline parameters
     qt = Eigen::VectorXd::Zero(n + 1), qr = Eigen::VectorXd::Zero(n + 1);
@@ -334,6 +334,8 @@ class Topp {
       Eigen::VectorXd r_ = Eigen::VectorXd::Zero(n_var);
       J_(4 * n + 2 + i, 4 * n + 2 + i) = 1;  // e_k
       r_(n + i) = 1;                         // b_k
+      Js.push_back(J_);
+      rs.push_back(r_);
     }
 
     // initialize dual variables
@@ -342,25 +344,32 @@ class Topp {
     eta = Eigen::VectorXd::Zero(n_ineq);
     rho = 1;
 
-    log_info("TOPP", "TOPP problem set up.");
+    log_info("TOPP problem set up.");
   }
 
   static double loss(void* instance, const Eigen::VectorXd& optX,
                      Eigen::VectorXd& optG) {
     Topp* self = static_cast<Topp*>(instance);
 
-    std::vector<double> resQuadeqs = optX.transpose() * self->Js * optX - self->rs * optX;
+    // x^T * Js * x - rs * x
+    std::vector<double> resQuadeqs = optX.transpose() * self->Js * optX - transpose(self->rs) * optX;
+    // Pk(mu / rho - As * x - bs)
     std::vector<Eigen::VectorXd> resSocs = socProjections(self->mus / self->rho - self->As * optX - self->bs);
+    // G * x - h - lambda / rho
     Eigen::VectorXd resEq = self->G * optX - self->h - self->lambda / self->rho;
+    // max[P * x - q + eta / rho, 0]
     Eigen::VectorXd resIneq = max(self->P * optX - self->q + self->eta / self->rho, 0);
 
     optG = self->f;
+    // G^T * (G * x - h - lambda / rho)
     optG += self->rho * self->G.transpose() * resEq;
+    // p^T * max[P * x - q + eta / rho, 0]
     optG += self->rho * self->P.transpose() * resIneq;
-    optG += self->rho * sum(self->As * resSocs);
-    for (int i = 0; i < self->n_quadeq; ++i) {
-      optG += self->rho * self->Js[i].transpose() * self->Js[i] * optX * optX.transpose() - 2 * self->Js[i].transpose() * optX * self->rs[i].transpose() + self->rs[i] * self->rs[i].transpose();
-    }
+    // As^T * Pk(mu / rho - As * x - bs)
+    optG += self->rho * sum(transpose(self->As) * resSocs);
+    // x^T * Js * x * Js * x - Js * x * rs^T - x^T * Js * rs^T + rs^T * x * rs
+    optG += self->rho *
+            sum(resQuadeqs * (2 * self->Js * optX - self->rs));
 
     return self->f.dot(optX) + self->rho / 2 * (sum(resQuadeqs) + sum(squaredNorm(resSocs)) + resEq.squaredNorm() + resIneq.squaredNorm());
   }
