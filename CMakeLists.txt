@@ -11,7 +11,6 @@ include_directories(
 )
 
 find_package(Eigen3 REQUIRED)
-find_package(absl CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(Threads)
@@ -37,5 +36,4 @@ add_executable(Cyber_Planner
 target_link_libraries(Cyber_Planner
     trajectory_native_proto
     Eigen3::Eigen
-    ${abseil_cpp_LIBRARIES}
 )
