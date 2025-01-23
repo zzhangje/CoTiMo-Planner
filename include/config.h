@@ -2,123 +2,136 @@
 #define CONFIG_H
 
 #include <cmath>
+#include <string>
 
-#ifndef CONFIG_DYNAMIC
-#define CONFIG_DYNAMIC
+namespace config {
 
-#define OBSTACLE_OFFSET 100.
-#define OBSTACLE_FIELD_REDUCTION .6
-#define ASTAR_HEURISTIC_COEFFICIENT 1.
+constexpr double toRadians(const double degree) {
+  return degree / 180 * M_PI;
+}
 
-#endif  // CONFIG_DYNAMIC
+constexpr double toDegrees(const double radian) {
+  return radian / M_PI * 180;
+}
 
-#ifndef CONFIG_BOT
-#define CONFIG_BOT
-#define CONFIG_BETABOT
-#endif  // CONFIG_BOT
+constexpr double constexprCos(const double x) {
+  return x - x * x * x / 6 + x * x * x * x * x / 120 - x * x * x * x * x * x * x / 5040 + x * x * x * x * x * x * x * x * x / 362880 - x * x * x * x * x * x * x * x * x * x * x / 39916800 + x * x * x * x * x * x * x * x * x * x * x * x * x / 6227020800;
+}
 
-#ifndef CONFIG_BETABOT
-#define CONFIG_BETABOT
-#endif  // CONFIG_BETABOT
+constexpr double constexprSin(const double x) {
+  return 1 - x * x / 2 + x * x * x * x / 24 - x * x * x * x * x * x / 720 + x * x * x * x * x * x * x * x / 40320 - x * x * x * x * x * x * x * x * x * x / 3628800 + x * x * x * x * x * x * x * x * x * x * x * x / 479001600;
+}
 
-#ifndef CONFIG_ALPHABOT
-#define CONFIG_ALPHABOT
+constexpr int constexprFloor(double x) {
+  return (x < 0) ? static_cast<int>(x) - 1 : static_cast<int>(x);
+}
 
-#define ARM_MAX_RPS (2 * M_PI)
-#define ELEVATOR_MAX_RPS (2 * M_PI)
-#define ARM_MAX_RPSS 0.01
-#define ELEVATOR_MAX_RPSS 0.01
+namespace dynamic {
+constexpr double OBSTACLE_OFFSET = 100.0;
+constexpr double OBSTACLE_FIELD_REDUCTION = 0.6;
+constexpr double ASTAR_HEURISTIC_COEFFICIENT = 1.0;
+}  // namespace dynamic
 
-#define ROBOT_WIDTH 0.7
-#define ROBOT_HEIGHT 0.2
-#define ROBOT_2_L1_FRONT 0.05
+namespace robot {
+using namespace alphabot;
+};  // namespace robot
 
-#define ELEVATOR_2_L1_FRONT 0.4
-#define ELEVATOR_2_GROUND 0.2
-#define ELEVATOR_2_GROUND_ANGLE 80.0
-#define ELEVATOR_SIN_ANGLE sin(ELEVATOR_2_GROUND_ANGLE / 180 * M_PI)
-#define ELEVATOR_COS_ANGLE cos(ELEVATOR_2_GROUND_ANGLE / 180 * M_PI)
+namespace alphabot {
+const std::string VERSION = "8214.0.0";
 
-#define ELEVATOR_MIN_POSITION 0
-#define ELEVATOR_MAX_POSITION 2.0
-#define ELEVATOR_GRID_SIZE 0.05
-#define ELEVATOR_GRID_NUMS (floor((ELEVATOR_MAX_POSITION - ELEVATOR_MIN_POSITION) / ELEVATOR_GRID_SIZE) + 1)
-#define ELEVATOR_REDUCTION 1.0
-#define ELEVATOR_ROTATION_2_POSITION (1.0 / 2 / M_PI)
-#define ELEVATOR_VMAX (ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION)
-#define ELEVATOR_AMAX (ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION)
+const double ROBOT_WIDTH = 0.7;
+const double ROBOT_HEIGHT = 0.2;
+const double ROBOT_2_L1_FRONT = 0.05;
 
-#define ARM_MIN_THETA_ROTATION 0
-#define ARM_MAX_THETA_ROTATION 350
-#define ARM_MIN_THETA_RADIAN (ARM_MIN_THETA_ROTATION / 180 * M_PI)
-#define ARM_MAX_THETA_RADIAN (ARM_MAX_THETA_ROTATION / 180 * M_PI)
-#define ARM_GRID_SIZE 0.1
-#define ARM_GRID_NUMS (floor((ARM_MAX_THETA_RADIAN - ARM_MIN_THETA_RADIAN) / ARM_GRID_SIZE) + 1)
-#define ARM_REDUCTION 1.0
-#define ARM_VMAX (ARM_MAX_RPS / ARM_REDUCTION)
-#define ARM_AMAX (ARM_MAX_RPSS / ARM_REDUCTION)
+const double ELEVATOR_2_L1_FRONT = 0.4;
+const double ELEVATOR_2_GROUND = 0.2;
+const double ELEVATOR_2_GROUND_ANGLE = 80.0;
+constexpr double ELEVATOR_SIN_ANGLE = constexprSin(toRadians(ELEVATOR_2_GROUND_ANGLE));
+constexpr double ELEVATOR_COS_ANGLE = constexprCos(toRadians(ELEVATOR_2_GROUND_ANGLE));
 
-#define ARM_MAX_VOLTAGE 12
-#define ARM_Kv 1
-#define ARM_Ka 1
-#define ELEVATOR_MAX_VOLTAGE 12
-#define ELEVATOR_Kv 1
-#define ELEVATOR_Ka 1
+const double ELEVATOR_MAX_VOLTAGE = 12;
+const double ELEVATOR_Kv = 1;
+const double ELEVATOR_Ka = 1;
+const double ELEVATOR_MIN_POSITION = 0;
+const double ELEVATOR_MAX_POSITION = 2.0;
+const double ELEVATOR_MAX_RPS = 2;
+const double ELEVATOR_MAX_RPSS = 0.01;
+const double ELEVATOR_REDUCTION = 1.0;
+const double ELEVATOR_ROTATION_2_POSITION = 1;
 
-#endif  // CONFIG_ALPHABOT
+const double ARM_MAX_VOLTAGE = 12;
+const double ARM_Kv = 1;
+const double ARM_Ka = 1;
+const double ARM_MIN_THETA_ROTATION = 0;
+const double ARM_MAX_THETA_ROTATION = 350;
+const double ARM_MAX_RPS = 2;
+const double ARM_MAX_RPSS = 0.01;
+const double ARM_REDUCTION = 1.0;
 
-#ifndef CONFIG_ENV
-#define CONFIG_ENV
+constexpr double ARM_MIN_THETA_RADIAN = toRadians(ARM_MIN_THETA_ROTATION);
+constexpr double ARM_MAX_THETA_RADIAN = toRadians(ARM_MAX_THETA_ROTATION);
+constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION;
+constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION;
+constexpr double ELEVATOR_VMAX = ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
+constexpr double ELEVATOR_AMAX = ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
 
-#define L1_FRONT_HEIGHT 0.454
-#define L1_BACK_HEIGHT 0.514
-#define L1_FRONT_2_L1_BACK 0.248
-#define L1_BACK_2_REEF_CENTER (0.832 - L1_FRONT_2_L1_BACK)
-#define REEF_CENTER_HEIGHT 1.2
+const double ELEVATOR_GRID_SIZE = 0.05;
+const double ARM_GRID_SIZE = 0.1;
+constexpr int ELEVATOR_GRID_NUMS = constexprFloor((ELEVATOR_MAX_POSITION - ELEVATOR_MIN_POSITION) / ELEVATOR_GRID_SIZE) + 1;
+constexpr int ARM_GRID_NUMS = constexprFloor((ARM_MAX_THETA_ROTATION - ARM_MIN_THETA_ROTATION) / ARM_GRID_SIZE) + 1;
+};  // namespace alphabot
 
-#define BRANCH_DIAMETER 0.042
-#define BRANCH_UL_X 0.296
-#define BRANCH_UL_Y 1.35
-#define BRANCH_UR_X (BRANCH_UL_X + BRANCH_DIAMETER)
-#define BRANCH_UR_Y BRANCH_UL_Y
-#define BRANCH_LR_X BRANCH_UR_X
-#define BRANCH_LR_Y 0.0
-#define BRANCH_LL_X BRANCH_UL_X
-#define BRANCH_LL_Y BRANCH_LR_Y
+namespace env {
+const double L1_FRONT_HEIGHT = 0.454;
+const double L1_BACK_HEIGHT = 0.514;
+const double L1_FRONT_2_L1_BACK = 0.248;
+constexpr double L1_BACK_2_REEF_CENTER = 0.832 - L1_FRONT_2_L1_BACK;
+const double REEF_CENTER_HEIGHT = 1.2;
 
-#define L4_UL_X 0.030
-#define L4_UL_Y 1.810
-#define L4_UR_X (L4_UL_X + BRANCH_DIAMETER)
-#define L4_UR_Y L4_UL_Y
-#define L4_LR_X L4_UR_X
-#define L4_LR_Y (L4_UR_Y - 0.173)
-#define L4_LL_X L4_UL_X
-#define L4_LL_Y L4_LR_Y
+const double BRANCH_DIAMETER = 0.042;
+const double BRANCH_UL_X = 0.296;
+const double BRANCH_UL_Y = 1.35;
+const double BRANCH_LR_Y = 0.0;
+constexpr double BRANCH_UR_X = BRANCH_UL_X + BRANCH_DIAMETER;
+constexpr double BRANCH_UR_Y = BRANCH_UL_Y;
+constexpr double BRANCH_LR_X = BRANCH_UR_X;
+constexpr double BRANCH_LL_X = BRANCH_UL_X;
+constexpr double BRANCH_LL_Y = BRANCH_LR_Y;
 
-#define L3_UL_X 0.053
-#define L3_UL_Y 1.194
-#define L3_LL_X 0.029
-#define L3_LL_Y 1.16
-#define L3_UR_X BRANCH_LL_X
-#define L3_UR_Y 1.024
-#define L3_LR_X BRANCH_LL_X
-#define L3_LR_Y 0.973
+const double L4_UL_X = 0.030;
+const double L4_UL_Y = 1.810;
+constexpr double L4_UR_X = L4_UL_X + BRANCH_DIAMETER;
+constexpr double L4_UR_Y = L4_UL_Y;
+constexpr double L4_LR_X = L4_UR_X;
+constexpr double L4_LR_Y = L4_UR_Y - 0.173;
+constexpr double L4_LL_X = L4_UL_X;
+constexpr double L4_LL_Y = L4_LR_Y;
 
-#define L2_UL_X L3_UL_X
-#define L2_UL_Y 0.79
-#define L2_LL_X L3_LL_X
-#define L2_LL_Y (L2_UL_Y - (L3_UL_Y - L3_LL_Y))
-#define L2_UR_X L3_UR_X
-#define L2_UR_Y (L2_UL_Y - (L3_UL_Y - L3_UR_Y))
-#define L2_LR_X L3_LR_X
-#define L2_LR_Y (L2_LL_Y - (L3_LL_Y - L3_LR_Y))
+const double L3_UL_X = 0.053;
+const double L3_UL_Y = 1.194;
+const double L3_LL_X = 0.029;
+const double L3_LL_Y = 1.16;
+const double L3_UR_Y = 1.024;
+const double L3_LR_Y = 0.973;
+constexpr double L3_UR_X = BRANCH_LL_X;
+constexpr double L3_LR_X = BRANCH_LL_X;
 
-#define ALGAE_HIGH_CENTER_X 0.7
-#define ALGAE_HIGH_CENTER_Y 1.2
-#define ALGAE_LOW_CENTER_X ALGAE_HIGH_CENTER_X
-#define ALGAE_LOW_CENTER_Y 0.4
-#define ALGAE_RADIUS 0.41
+const double L2_UL_Y = 0.79;
+constexpr double L2_UL_X = L3_UL_X;
+constexpr double L2_LL_X = L3_LL_X;
+constexpr double L2_LL_Y = L2_UL_Y - (L3_UL_Y - L3_LL_Y);
+constexpr double L2_UR_X = L3_UR_X;
+constexpr double L2_UR_Y = L2_UL_Y - (L3_UL_Y - L3_UR_Y);
+constexpr double L2_LR_X = L3_LR_X;
+constexpr double L2_LR_Y = L2_LL_Y - (L3_LL_Y - L3_LR_Y);
 
-#endif  // CONFIG_ENV
+const double ALGAE_HIGH_CENTER_X = 0.7;
+const double ALGAE_HIGH_CENTER_Y = 1.2;
+const double ALGAE_LOW_CENTER_Y = 0.4;
+const double ALGAE_RADIUS = 0.41;
+constexpr double ALGAE_LOW_CENTER_X = ALGAE_HIGH_CENTER_X;
+};  // namespace env
+
+};  // namespace config
 
 #endif  // CONFIG_H
