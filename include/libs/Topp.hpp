@@ -1,12 +1,9 @@
-
-#include <ros/ros.h>
-
 #include <cmath>
 #include <eigen3/Eigen/Eigen>
 
-#include "Logger.hpp"
 #include "config.h"
 #include "lbfgs.hpp"
+#include "log.hpp"
 #include "spline.hpp"
 #include "utils.hpp"
 
@@ -90,9 +87,10 @@ class Topp {
   }
 
   void solve(int maxIter = 30) {
-    Logger::getInstance()->log(LogLevel::INFO, "TOPP",
-                               "Solving TOPP problem...");
+    log_info("TOPP", "Solving TOPP problem...");
+
     double cost;
+
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
       lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
@@ -103,23 +101,24 @@ class Topp {
       eta = max(eta + rho * (P * x - q), 0);
       rho = std::min(rho * (1 + GAMMA), BETA);
 
-      Logger::getInstance()->log(LogLevel::DEBUG, "TOPP", "iter: " + std::to_string(this->iter) + ", cost: " + std::to_string(cost));
+      // TODO: output time consumed
+      log_debug("TOPP", "iter: %d, cost: %f", this->iter, cost);
     }
 
-    Logger::getInstance()->log(LogLevel::INFO, "TOPP", "TOPP problem solved.");
+    log_info("TOPP", "TOPP problem solved.");
   }
 
   int getIter() { return iter; }
   double getLoss() {
     return f.dot(x) +
-           rho / 2 * ((G * x - h - lambda / rho).squaredNorm() + squaredNorm(x.transpose() * Js * x - rs * x) + (max(P * x - q + eta / rho, 0)).squaredNorm() + squaredNorm(socProjections(mus / rho - As * x - bs)));
+           rho / 2 * ((G * x - h - lambda / rho).squaredNorm() + squaredNorm(x.transpose() * Js * x - rs * x) + (max(P * x - q + eta / rho, 0)).squaredNorm() + sum(squaredNorm(socProjections(mus / rho - As * x - bs))));
   }
   void get() {}
 
  private:
   void setup() {
-    Logger::getInstance()->log(LogLevel::INFO, "TOPP",
-                               "Setting up TOPP problem...");
+    log_info("TOPP", "Setting up TOPP problem...");
+
     // get spline parameters
     qt = Eigen::VectorXd::Zero(n + 1), qr = Eigen::VectorXd::Zero(n + 1);
     for (int i = 0; i <= n; ++i) {
@@ -343,25 +342,9 @@ class Topp {
     eta = Eigen::VectorXd::Zero(n_ineq);
     rho = 1;
 
-    /**
-     * -b_k <= 0
-     * q'_x(s_k)^2 * b_k <= vmax^2
-     * q'_y(s_k)^2 * b_k <= vmax^2
-     */
-    P(7 * n, 2 * n) = -1;
-    // q(7 * n) = 0;
-    P(7 * n + 1, 2 * n) = qx1(n) * qx1(n);
-    P(7 * n + 2, 2 * n) = qy1(n) * qy1(n);
-    q(7 * n + 1) = config::ELEVATOR_VMAX * config::ELEVATOR_VMAX;
-    q(7 * n + 2) = config::ARM_VMAX * config::ARM_VMAX;
-    rho = 1;
-
-    x = Eigen::VectorXd::Zero(f.rows());
-    mu = std::vector<Eigen::VectorXd>(A.size(), Eigen::VectorXd::Zero(3));
-    lambda = Eigen::VectorXd::Zero(G.rows());
-    eta = Eigen::VectorXd::Zero(P.rows());
+    log_info("TOPP", "TOPP problem set up.");
   }
-  
+
   static double loss(void* instance, const Eigen::VectorXd& optX,
                      Eigen::VectorXd& optG) {
     Topp* self = static_cast<Topp*>(instance);
