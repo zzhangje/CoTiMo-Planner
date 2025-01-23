@@ -5,6 +5,7 @@
 #include <iostream>
 #include <thread>
 
+#include "ArmTrajectoryService.grpc.pb.h"
 #include "config.h"
 #include "lbfgs.hpp"
 #include "log.hpp"
@@ -14,9 +15,14 @@
 #define BETA 1e3
 #define GAMMA .1
 
+using com::nextinnovation::armtrajectoryservice::ArmCurrentState;
+using com::nextinnovation::armtrajectoryservice::ArmPositionState;
+using com::nextinnovation::armtrajectoryservice::ArmTrajectoryState;
+
 class Topp {
  private:
   std::vector<Eigen::Vector2d> points;
+  // number of segments
   int n;
   int iter;
   lbfgs::lbfgs_parameter_t params;
@@ -137,9 +143,47 @@ class Topp {
   double getLoss() {
     return loss(this, x, g);
   }
-  void get(
-      std::vector<double>& timestamp, std::vector<Eigen::Vector2d>& position, std::vector<Eigen::Vector2d>& voltage) {
+  void getStates(std::vector<ArmTrajectoryState>& states) {
+    Eigen::VectorXd ak = x.segment(0, n);
+    Eigen::VectorXd bk = x.segment(n, n + 1);
+    Eigen::VectorXd ck = x.segment(2 * n + 1, n + 1);
+    Eigen::VectorXd dk = x.segment(3 * n + 2, n);
+    Eigen::VectorXd ek = x.segment(4 * n + 2, n + 1);
+
+    states.clear();
+    ArmTrajectoryState state;
+    ArmPositionState position;
+    ArmCurrentState current;
+
+    position.set_shoulderheightmeter(points[0].x());
+    position.set_elbowpositiondegree(points[0].y() / M_PI * 180);
+    current.set_shouldercurrentamp(alphabot::ELEVATOR_Kv * qt1(0) * ek(0) + alphabot::ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)));
+    current.set_elbowcurrentamp(alphabot::ARM_Kv * qr1(0) * ek(0) + alphabot::ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0)));
+    state.set_timestamp(0);
+    state.set_allocated_position(&position);
+    state.set_allocated_current(&current);
+    states.push_back(state);
+
+    for (int i = 1; i < n; ++i) {
+      position.set_shoulderheightmeter(points[i].x());
+      position.set_elbowpositiondegree(points[i].y() / M_PI * 180);
+      current.set_shouldercurrentamp(alphabot::ELEVATOR_Kv * qt1(i) * ek(i) + alphabot::ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
+      current.set_elbowcurrentamp(alphabot::ARM_Kv * qr1(i) * ek(i) + alphabot::ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
+      state.set_timestamp(arc(i - 1) * 2 / (ek(i) + ek(i - 1)));
+      state.set_allocated_position(&position);
+      state.set_allocated_current(&current);
+      states.push_back(state);
     }
+
+    position.set_shoulderheightmeter(points[n].x());
+    position.set_elbowpositiondegree(points[n].y() / M_PI * 180);
+    current.set_shouldercurrentamp(alphabot::ELEVATOR_Kv * qt1(n) * ek(n) + alphabot::ELEVATOR_Ka * qt1(n) * bk(n));
+    current.set_elbowcurrentamp(alphabot::ARM_Kv * qr1(n) * ek(n) + alphabot::ARM_Ka * qr1(n) * bk(n));
+    state.set_timestamp(arc(n - 1) * 2 / (ek(n) + ek(n - 1)));
+    state.set_allocated_position(&position);
+    state.set_allocated_current(&current);
+    states.push_back(state);
+  }
 
  private:
   void setup() {
