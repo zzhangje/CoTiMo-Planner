@@ -5,6 +5,9 @@
 
 #include "config.h"
 
+using namespace config::alphabot;
+using namespace config::env;
+
 class Segment {
  private:
   Eigen::Vector2d pts1, pts2;
