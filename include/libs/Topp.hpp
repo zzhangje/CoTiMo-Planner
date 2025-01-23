@@ -1,21 +1,54 @@
-
-#include <ros/ros.h>
-
+#include <chrono>
 #include <cmath>
 #include <eigen3/Eigen/Eigen>
+#include <eigen3/Eigen/Sparse>
+#include <iostream>
+#include <thread>
 
-#include "Logger.hpp"
+#include "ArmTrajectoryService.grpc.pb.h"
 #include "config.h"
 #include "lbfgs.hpp"
+#include "log.hpp"
 #include "spline.hpp"
-#include "utils.hpp"
 
 #define BETA 1e3
 #define GAMMA .1
 
+using com::nextinnovation::armtrajectoryservice::ArmCurrentState;
+using com::nextinnovation::armtrajectoryservice::ArmPositionState;
+using com::nextinnovation::armtrajectoryservice::ArmTrajectoryState;
+
+Eigen::VectorXd max(const Eigen::VectorXd& v, const double num) {
+  Eigen::VectorXd res = v;
+  for (int i = 0; i < v.rows(); ++i) {
+    res(i) = std::max(num, v(i));
+  }
+  return res;
+}
+
+Eigen::VectorXd socProjection(const Eigen::VectorXd& v) {
+  if (v.rows() == 1) {
+    return v;
+  }
+  double v0 = v(0);
+  Eigen::VectorXd v1 = v.tail(v.rows() - 1);
+  if (v0 > v1.norm()) {
+    return v;
+  } else if (v0 < -v1.norm()) {
+    return Eigen::VectorXd::Zero(v.rows());
+  } else {
+    Eigen::VectorXd Pk = Eigen::VectorXd::Zero(v.rows());
+    Pk(0) = v1.norm();
+    Pk.tail(v.rows() - 1) = v1;
+    Pk *= (v0 + v1.norm()) / 2 / v1.norm();
+    return Pk;
+  }
+}
+
 class Topp {
  private:
   std::vector<Eigen::Vector2d> points;
+  // number of segments
   int n;
   int iter;
   lbfgs::lbfgs_parameter_t params;
@@ -40,34 +73,34 @@ class Topp {
   /**
    * linear coefficients
    */
-  Eigen::VectorXd f;
+  Eigen::SparseVector<double> f;
 
   /**
    * second order cone constraints
    */
-  std::vector<Eigen::MatrixXd> As;
-  std::vector<Eigen::VectorXd> bs;
+  std::vector<Eigen::SparseMatrix<double>> As;
+  std::vector<Eigen::SparseVector<double>> bs;
   int n_soc;
 
   /**
    * linear equality constraints
    */
-  Eigen::MatrixXd G;
-  Eigen::VectorXd h;
+  Eigen::SparseMatrix<double> G;
+  Eigen::SparseVector<double> h;
   int n_eq;
 
   /**
    * linear inequality constraints
    */
-  Eigen::MatrixXd P;
-  Eigen::VectorXd q;
+  Eigen::SparseMatrix<double> P;
+  Eigen::SparseVector<double> q;
   int n_ineq;
 
   /**
    * quadratic equality constraints
    */
-  std::vector<Eigen::MatrixXd> Js;
-  std::vector<Eigen::VectorXd> rs;
+  std::vector<Eigen::SparseMatrix<double>> Js;
+  std::vector<Eigen::SparseVector<double>> rs;
   int n_quadeq;
 
   /**
@@ -90,36 +123,98 @@ class Topp {
   }
 
   void solve(int maxIter = 30) {
-    Logger::getInstance()->log(LogLevel::INFO, "TOPP",
-                               "Solving TOPP problem...");
+    log_info("Solving TOPP problem...");
+
     double cost;
+
+    auto now = std::chrono::high_resolution_clock::now();
+    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    auto lastMillis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          now.time_since_epoch())
+                          .count();
+    auto lastMicros = std::chrono::duration_cast<std::chrono::microseconds>(
+                          now.time_since_epoch())
+                          .count();
+
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
       lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
 
+      now = std::chrono::high_resolution_clock::now();
+      time_t_now = std::chrono::system_clock::to_time_t(now);
+      auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        now.time_since_epoch())
+                        .count();
+      auto micros = std::chrono::duration_cast<std::chrono::microseconds>(
+                        now.time_since_epoch())
+                        .count();
+
       // update dual variables
-      mus = socProjections(mus - rho * (As * x + bs));
+      for (int i = 0; i < n_soc; ++i) {
+        mus[i] = socProjection(mus[i] / rho - As[i] * x - bs[i]);
+      }
       lambda = lambda + rho * (G * x - h);
       eta = max(eta + rho * (P * x - q), 0);
       rho = std::min(rho * (1 + GAMMA), BETA);
 
-      Logger::getInstance()->log(LogLevel::DEBUG, "TOPP", "iter: " + std::to_string(this->iter) + ", cost: " + std::to_string(cost));
+      log_debug("iter: %2d, duration: %3d.%3dms, loss: %f", this->iter, (millis - lastMillis) % 1000, (micros - lastMicros) % 1000, cost);
+      lastMillis = millis;
+      lastMicros = micros;
     }
 
-    Logger::getInstance()->log(LogLevel::INFO, "TOPP", "TOPP problem solved.");
+    log_info("TOPP problem solved.");
   }
 
   int getIter() { return iter; }
   double getLoss() {
-    return f.dot(x) +
-           rho / 2 * ((G * x - h - lambda / rho).squaredNorm() + squaredNorm(x.transpose() * Js * x - rs * x) + (max(P * x - q + eta / rho, 0)).squaredNorm() + squaredNorm(socProjections(mus / rho - As * x - bs)));
+    return loss(this, x, g);
   }
-  void get() {}
+  void getStates(std::vector<ArmTrajectoryState>& states) {
+    Eigen::VectorXd ak = x.segment(0, n);
+    Eigen::VectorXd bk = x.segment(n, n + 1);
+    Eigen::VectorXd ck = x.segment(2 * n + 1, n + 1);
+    Eigen::VectorXd dk = x.segment(3 * n + 2, n);
+    Eigen::VectorXd ek = x.segment(4 * n + 2, n + 1);
+
+    states.clear();
+    ArmTrajectoryState state;
+    ArmPositionState position;
+    ArmCurrentState current;
+
+    position.set_shoulderheightmeter(points[0].x());
+    position.set_elbowpositiondegree(points[0].y() / M_PI * 180);
+    current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(0) * ek(0) + ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)));
+    current.set_elbowcurrentamp(ARM_Kv * qr1(0) * ek(0) + ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0)));
+    state.set_timestamp(0);
+    state.set_allocated_position(&position);
+    state.set_allocated_current(&current);
+    states.push_back(state);
+
+    for (int i = 1; i < n; ++i) {
+      position.set_shoulderheightmeter(points[i].x());
+      position.set_elbowpositiondegree(points[i].y() / M_PI * 180);
+      current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(i) * ek(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
+      current.set_elbowcurrentamp(ARM_Kv * qr1(i) * ek(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
+      state.set_timestamp(arc(i - 1) * 2 / (ek(i) + ek(i - 1)));
+      state.set_allocated_position(&position);
+      state.set_allocated_current(&current);
+      states.push_back(state);
+    }
+
+    position.set_shoulderheightmeter(points[n].x());
+    position.set_elbowpositiondegree(points[n].y() / M_PI * 180);
+    current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(n) * ek(n) + ELEVATOR_Ka * qt1(n) * bk(n));
+    current.set_elbowcurrentamp(ARM_Kv * qr1(n) * ek(n) + ARM_Ka * qr1(n) * bk(n));
+    state.set_timestamp(arc(n - 1) * 2 / (ek(n) + ek(n - 1)));
+    state.set_allocated_position(&position);
+    state.set_allocated_current(&current);
+    states.push_back(state);
+  }
 
  private:
   void setup() {
-    Logger::getInstance()->log(LogLevel::INFO, "TOPP",
-                               "Setting up TOPP problem...");
+    log_info("Setting up TOPP problem[*/] ...");
+
     // get spline parameters
     qt = Eigen::VectorXd::Zero(n + 1), qr = Eigen::VectorXd::Zero(n + 1);
     for (int i = 0; i <= n; ++i) {
@@ -147,25 +242,29 @@ class Topp {
     qr1(n) = 3 * qra(n - 1) + 2 * qrb(n - 1) + qrc(n - 1);
     qt2(n) = 6 * qta(n - 1) + 2 * qtb(n - 1);
     qr2(n) = 6 * qra(n - 1) + 2 * qrb(n - 1);
+    log_debug("Setting up TOPP problem[1/] spline parameters generated.");
 
     // initialize lbfgs params
     params.g_epsilon = 1.0e-8;
     params.past = 3;
     params.delta = 1.0e-8;
+    log_debug("Setting up TOPP problem[2/] lbfgs parameters generated.");
 
     // initialize optimization variables
     n_var = 5 * n + 3;
     x = Eigen::VectorXd::Zero(n_var);
     g = Eigen::VectorXd::Zero(n_var);
+    log_debug("Setting up TOPP problem[3/] optimization variables initialized.");
 
     /**
      * initialize linear coefficients
      * \sum 2 * (s_{k+1} - s_k) * d_k
      */
-    f = Eigen::VectorXd::Zero(n_var);
+    f = Eigen::SparseVector<double>(n_var);
     for (int i = 0; i < n; ++i) {
-      f(3 * n + 2 + i) = 2 * arc(i);
+      f.insert(3 * n + 2 + i) = 2 * arc(i);
     }
+    log_debug("Setting up TOPP problem[4/] linear coefficients initialized.");
 
     /**
      * initialize second order cone constraints
@@ -183,13 +282,13 @@ class Topp {
      * || b_k - 1 ||
      */
     for (int i = 0; i <= n; ++i) {
-      Eigen::MatrixXd A_(3, n_var);
-      Eigen::VectorXd b_(3);
-      A_(0, n + i) = 1;          // b_k
-      A_(1, 2 * n + 1 + i) = 2;  // c_k
-      A_(2, n + i) = 1;          // b_k
-      b_(0) = 1;
-      b_(2) = -1;
+      Eigen::SparseMatrix<double> A_(3, n_var);
+      Eigen::SparseVector<double> b_(3);
+      A_.insert(0, n + i) = 1;          // b_k
+      A_.insert(1, 2 * n + 1 + i) = 2;  // c_k
+      A_.insert(2, n + i) = 1;          // b_k
+      b_.insert(0) = 1;
+      b_.insert(2) = -1;
       As.push_back(A_);
       bs.push_back(b_);
     }
@@ -204,34 +303,35 @@ class Topp {
      * || c_{k+1} + c_k - d_k ||
      */
     for (int i = 0; i < n; ++i) {
-      Eigen::MatrixXd A_(3, n_var);
-      Eigen::VectorXd b_(3);
-      A_(0, 2 * n + 1 + i) = 1;   // c_k
-      A_(0, 2 * n + 2 + i) = 1;   // c_{k+1}
-      A_(0, 3 * n + 2 + i) = 1;   // d_k
-      A_(2, 2 * n + 1 + i) = 1;   // c_k
-      A_(2, 2 * n + 2 + i) = 1;   // c_{k+1}
-      A_(2, 3 * n + 2 + i) = -1;  // d_k
-      b_(1) = 2;
+      Eigen::SparseMatrix<double> A_(3, n_var);
+      Eigen::SparseVector<double> b_(3);
+      A_.insert(0, 2 * n + 1 + i) = 1;   // c_k
+      A_.insert(0, 2 * n + 2 + i) = 1;   // c_{k+1}
+      A_.insert(0, 3 * n + 2 + i) = 1;   // d_k
+      A_.insert(2, 2 * n + 1 + i) = 1;   // c_k
+      A_.insert(2, 2 * n + 2 + i) = 1;   // c_{k+1}
+      A_.insert(2, 3 * n + 2 + i) = -1;  // d_k
+      b_.insert(1) = 2;
       As.push_back(A_);
       bs.push_back(b_);
     }
+    log_debug("Setting up TOPP problem[5/] second order cone constraints initialized.");
 
     /**
      * initialize linear equality constraints
      */
     n_eq = n + 4;
-    G = Eigen::MatrixXd::Zero(n_eq, n_var);
-    h = Eigen::VectorXd::Zero(n_eq);
+    G = Eigen::SparseMatrix<double>(n_eq, n_var);
+    h = Eigen::SparseVector<double>(n_eq);
 
     /**
      * kinematic constraints
      * 2(s_{k+1} - s_k) * a_k + b_k - b_{k+1} = 0
      */
     for (int i = 0; i < n; ++i) {
-      G(i, i) = 2 * arc(i);  // 2(s_{k+1} - s_k)
-      G(i, n + i) = 1;       // b_k
-      G(i, n + i + 1) = -1;  // b_{k+1}
+      G.insert(i, i) = 2 * arc(i);  // 2(s_{k+1} - s_k)
+      G.insert(i, n + i) = 1;       // b_k
+      G.insert(i, n + i + 1) = -1;  // b_{k+1}
     }
 
     /**
@@ -241,24 +341,26 @@ class Topp {
      * e_0 = 0
      * e_n = 0
      */
-    G(n, n) = 1;              // b_0
-    G(n + 1, 2 * n) = 1;      // b_n
-    G(n + 2, 4 * n + 2) = 1;  // e_0
-    G(n + 3, 5 * n + 2) = 1;  // e_n
+    G.insert(n, n) = 1;              // b_0
+    G.insert(n + 1, 2 * n) = 1;      // b_n
+    G.insert(n + 2, 4 * n + 2) = 1;  // e_0
+    G.insert(n + 3, 5 * n + 2) = 1;  // e_n
+
+    log_debug("Setting up TOPP problem[6/] linear equality constraints initialized.");
 
     /**
      * initialize linear inequality constraints
      */
     n_ineq = 11 * n + 3;
-    P = Eigen::MatrixXd::Zero(n_ineq, n_var);
-    q = Eigen::VectorXd::Zero(n_ineq);
+    P = Eigen::SparseMatrix<double>(n_ineq, n_var);
+    q = Eigen::SparseVector<double>(n_ineq);
 
     /**
      * always forward
      * -b_k <= 0
      */
     for (int i = 0; i <= n; ++i) {
-      P(i, n + i) = -1;  // b_k
+      P.insert(i, n + i) = -1;  // b_k
     }  // end at n
 
     /**
@@ -267,10 +369,10 @@ class Topp {
      * q'_r(s_k)^2 * b_k <= vr_max^2
      */
     for (int i = 0; i <= n; ++i) {
-      P(n + 1 + 2 * i, n + i) = qt1(i) * qt1(i);  // b_k
-      P(n + 2 + 2 * i, n + i) = qr1(i) * qr1(i);  // b_k
-      q(n + 1 + 2 * i) = alphabot::ELEVATOR_VMAX * alphabot::ELEVATOR_VMAX;
-      q(n + 2 + 2 * i) = alphabot::ARM_VMAX * alphabot::ARM_VMAX;
+      P.insert(n + 1 + 2 * i, n + i) = qt1(i) * qt1(i);  // b_k
+      P.insert(n + 2 + 2 * i, n + i) = qr1(i) * qr1(i);  // b_k
+      q.insert(n + 1 + 2 * i) = ELEVATOR_VMAX * ELEVATOR_VMAX;
+      q.insert(n + 2 + 2 * i) = ARM_VMAX * ARM_VMAX;
     }  // end at 3n+2
 
     /**
@@ -281,18 +383,18 @@ class Topp {
      * -q''_r(s_k)^2 * b_k - q'_r(s_k) * a_k <= ar_max
      */
     for (int i = 0; i < n; ++i) {
-      P(3 * n + 3 + 4 * i, n + i) = qt2(i) * qt2(i);   // b_k
-      P(3 * n + 4 + 4 * i, n + i) = -qt2(i) * qt2(i);  // b_k
-      P(3 * n + 5 + 4 * i, n + i) = qr2(i) * qr2(i);   // b_k
-      P(3 * n + 6 + 4 * i, n + i) = -qr2(i) * qr2(i);  // b_k
-      P(3 * n + 3 + 4 * i, i) = qt1(i);                // a_k
-      P(3 * n + 4 + 4 * i, i) = -qt1(i);               // a_k
-      P(3 * n + 5 + 4 * i, i) = qr1(i);                // a_k
-      P(3 * n + 6 + 4 * i, i) = -qr1(i);               // a_k
-      q(3 * n + 3 + 4 * i) = alphabot::ELEVATOR_AMAX;
-      q(3 * n + 4 + 4 * i) = alphabot::ELEVATOR_AMAX;
-      q(3 * n + 5 + 4 * i) = alphabot::ARM_AMAX;
-      q(3 * n + 6 + 4 * i) = alphabot::ARM_AMAX;
+      P.insert(3 * n + 3 + 4 * i, n + i) = qt2(i) * qt2(i);   // b_k
+      P.insert(3 * n + 4 + 4 * i, n + i) = -qt2(i) * qt2(i);  // b_k
+      P.insert(3 * n + 5 + 4 * i, n + i) = qr2(i) * qr2(i);   // b_k
+      P.insert(3 * n + 6 + 4 * i, n + i) = -qr2(i) * qr2(i);  // b_k
+      P.insert(3 * n + 3 + 4 * i, i) = qt1(i);                // a_k
+      P.insert(3 * n + 4 + 4 * i, i) = -qt1(i);               // a_k
+      P.insert(3 * n + 5 + 4 * i, i) = qr1(i);                // a_k
+      P.insert(3 * n + 6 + 4 * i, i) = -qr1(i);               // a_k
+      q.insert(3 * n + 3 + 4 * i) = ELEVATOR_AMAX;
+      q.insert(3 * n + 4 + 4 * i) = ELEVATOR_AMAX;
+      q.insert(3 * n + 5 + 4 * i) = ARM_AMAX;
+      q.insert(3 * n + 6 + 4 * i) = ARM_AMAX;
     }  // end at 7n+2
 
     /**
@@ -303,23 +405,25 @@ class Topp {
      * -Kv * q'_r(s_k) * e_k - Ka * q''_r(s_k) * a_k - Ka * q'_r(s_k) * b_k <= V_max
      */
     for (int i = 0; i < n; ++i) {
-      P(7 * n + 3 + 4 * i, 4 * n + 2 + i) = alphabot::ELEVATOR_Kv * qt1(i);   // e_k
-      P(7 * n + 4 + 4 * i, 4 * n + 2 + i) = -alphabot::ELEVATOR_Kv * qt1(i);  // e_k
-      P(7 * n + 5 + 4 * i, 4 * n + 2 + i) = alphabot::ARM_Kv * qr1(i);        // e_k
-      P(7 * n + 6 + 4 * i, 4 * n + 2 + i) = -alphabot::ARM_Kv * qr1(i);       // e_k
-      P(7 * n + 3 + 4 * i, i) = alphabot::ARM_Ka * qt2(i);                    // a_k
-      P(7 * n + 4 + 4 * i, i) = -alphabot::ARM_Ka * qt2(i);                   // a_k
-      P(7 * n + 5 + 4 * i, i) = alphabot::ELEVATOR_Ka * qr2(i);               // a_k
-      P(7 * n + 6 + 4 * i, i) = -alphabot::ELEVATOR_Ka * qr2(i);              // a_k
-      P(7 * n + 3 + 4 * i, n + i) = alphabot::ELEVATOR_Ka * qt1(i);           // b_k
-      P(7 * n + 4 + 4 * i, n + i) = -alphabot::ELEVATOR_Ka * qt1(i);          // b_k
-      P(7 * n + 5 + 4 * i, n + i) = alphabot::ARM_Ka * qr1(i);                // b_k
-      P(7 * n + 6 + 4 * i, n + i) = -alphabot::ARM_Ka * qr1(i);               // b_k
-      q(7 * n + 3 + 4 * i) = alphabot::ELEVATOR_MAX_VOLTAGE;
-      q(7 * n + 4 + 4 * i) = alphabot::ELEVATOR_MAX_VOLTAGE;
-      q(7 * n + 5 + 4 * i) = alphabot::ARM_MAX_VOLTAGE;
-      q(7 * n + 6 + 4 * i) = alphabot::ARM_MAX_VOLTAGE;
+      P.insert(7 * n + 3 + 4 * i, 4 * n + 2 + i) = ELEVATOR_Kv * qt1(i);   // e_k
+      P.insert(7 * n + 4 + 4 * i, 4 * n + 2 + i) = -ELEVATOR_Kv * qt1(i);  // e_k
+      P.insert(7 * n + 5 + 4 * i, 4 * n + 2 + i) = ARM_Kv * qr1(i);        // e_k
+      P.insert(7 * n + 6 + 4 * i, 4 * n + 2 + i) = -ARM_Kv * qr1(i);       // e_k
+      P.insert(7 * n + 3 + 4 * i, i) = ARM_Ka * qt2(i);                    // a_k
+      P.insert(7 * n + 4 + 4 * i, i) = -ARM_Ka * qt2(i);                   // a_k
+      P.insert(7 * n + 5 + 4 * i, i) = ELEVATOR_Ka * qr2(i);               // a_k
+      P.insert(7 * n + 6 + 4 * i, i) = -ELEVATOR_Ka * qr2(i);              // a_k
+      P.insert(7 * n + 3 + 4 * i, n + i) = ELEVATOR_Ka * qt1(i);           // b_k
+      P.insert(7 * n + 4 + 4 * i, n + i) = -ELEVATOR_Ka * qt1(i);          // b_k
+      P.insert(7 * n + 5 + 4 * i, n + i) = ARM_Ka * qr1(i);                // b_k
+      P.insert(7 * n + 6 + 4 * i, n + i) = -ARM_Ka * qr1(i);               // b_k
+      q.insert(7 * n + 3 + 4 * i) = ELEVATOR_MAX_VOLTAGE;
+      q.insert(7 * n + 4 + 4 * i) = ELEVATOR_MAX_VOLTAGE;
+      q.insert(7 * n + 5 + 4 * i) = ARM_MAX_VOLTAGE;
+      q.insert(7 * n + 6 + 4 * i) = ARM_MAX_VOLTAGE;
     }  // end at 11n+2
+
+    log_debug("Setting up TOPP problem[7/] linear inequality constraints initialized.");
 
     /**
      * initialize quadratic equality constraints
@@ -331,54 +435,55 @@ class Topp {
      * e_k * e_k = b_k
      */
     for (int i = 0; i <= n; ++i) {
-      Eigen::MatrixXd J_ = Eigen::MatrixXd::Zero(n_var, n_var);
-      Eigen::VectorXd r_ = Eigen::VectorXd::Zero(n_var);
-      J_(4 * n + 2 + i, 4 * n + 2 + i) = 1;  // e_k
-      r_(n + i) = 1;                         // b_k
+      Eigen::SparseMatrix<double> J_(n_var, n_var);
+      Eigen::SparseVector<double> r_(n_var);
+      J_.insert(4 * n + 2 + i, 4 * n + 2 + i) = 1;  // e_k
+      r_.insert(n + i) = 1;                         // b_k
+      Js.push_back(J_);
+      rs.push_back(r_);
     }
+    log_debug("Setting up TOPP problem[8/] quadratic equality constraints initialized.");
 
     // initialize dual variables
     mus = std::vector<Eigen::VectorXd>(n_soc, Eigen::VectorXd::Zero(3));
     lambda = Eigen::VectorXd::Zero(n_eq);
     eta = Eigen::VectorXd::Zero(n_ineq);
     rho = 1;
+    log_debug("Setting up TOPP problem[9/] dual variables initialized.");
 
-    /**
-     * -b_k <= 0
-     * q'_x(s_k)^2 * b_k <= vmax^2
-     * q'_y(s_k)^2 * b_k <= vmax^2
-     */
-    P(7 * n, 2 * n) = -1;
-    // q(7 * n) = 0;
-    P(7 * n + 1, 2 * n) = qx1(n) * qx1(n);
-    P(7 * n + 2, 2 * n) = qy1(n) * qy1(n);
-    q(7 * n + 1) = config::ELEVATOR_VMAX * config::ELEVATOR_VMAX;
-    q(7 * n + 2) = config::ARM_VMAX * config::ARM_VMAX;
-    rho = 1;
-
-    x = Eigen::VectorXd::Zero(f.rows());
-    mu = std::vector<Eigen::VectorXd>(A.size(), Eigen::VectorXd::Zero(3));
-    lambda = Eigen::VectorXd::Zero(G.rows());
-    eta = Eigen::VectorXd::Zero(P.rows());
+    log_info("TOPP problem set up.");
   }
-  
+
   static double loss(void* instance, const Eigen::VectorXd& optX,
                      Eigen::VectorXd& optG) {
-    Topp* self = static_cast<Topp*>(instance);
+    Topp* topp = static_cast<Topp*>(instance);
+    double res = topp->f.dot(optX);
+    optG = topp->f;
 
-    std::vector<double> resQuadeqs = optX.transpose() * self->Js * optX - self->rs * optX;
-    std::vector<Eigen::VectorXd> resSocs = socProjections(self->mus / self->rho - self->As * optX - self->bs);
-    Eigen::VectorXd resEq = self->G * optX - self->h - self->lambda / self->rho;
-    Eigen::VectorXd resIneq = max(self->P * optX - self->q + self->eta / self->rho, 0);
+    // linear equality constraints
+    Eigen::VectorXd resEq = topp->G * optX - topp->h - topp->lambda / topp->rho;
+    res += topp->rho / 2 * resEq.squaredNorm();
+    optG += topp->rho * topp->G.transpose() * resEq;
 
-    optG = self->f;
-    optG += self->rho * self->G.transpose() * resEq;
-    optG += self->rho * self->P.transpose() * resIneq;
-    optG += self->rho * sum(self->As * resSocs);
-    for (int i = 0; i < self->n_quadeq; ++i) {
-      optG += self->rho * self->Js[i].transpose() * self->Js[i] * optX * optX.transpose() - 2 * self->Js[i].transpose() * optX * self->rs[i].transpose() + self->rs[i] * self->rs[i].transpose();
+    // linear inequality constraints
+    Eigen::VectorXd resIneq = max(topp->P * optX - topp->q + topp->eta / topp->rho, 0);
+    res += topp->rho / 2 * resIneq.squaredNorm();
+    optG += topp->rho * topp->P.transpose() * resIneq;
+
+    // second order cone constraints
+    for (int i = 0; i < topp->n_soc; ++i) {
+      Eigen::VectorXd resSoc = socProjection(topp->mus[i] / topp->rho - topp->As[i] * optX - topp->bs[i]);
+      res += topp->rho / 2 * resSoc.squaredNorm();
+      optG += topp->rho * topp->As[i].transpose() * resSoc;
     }
 
-    return self->f.dot(optX) + self->rho / 2 * (sum(resQuadeqs) + sum(squaredNorm(resSocs)) + resEq.squaredNorm() + resIneq.squaredNorm());
+    // quadratic equality constraints
+    for (int i = 0; i < topp->n_quadeq; ++i) {
+      double resQuadeq = (optX.transpose() * topp->Js[i]).dot(optX) - topp->rs[i].dot(optX);
+      res += topp->rho / 2 * resQuadeq * resQuadeq;
+      optG += topp->rho * (2 * topp->Js[i] * optX - topp->rs[i]);
+    }
+
+    return res;
   }
 };

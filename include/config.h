@@ -3,110 +3,122 @@
 
 #include <cmath>
 
-namespace dynamic {
-const double OBSTACLE_OFFSET = 100;
-const double OBSTACLE_FIELD_REDUCTION = .6;
-const double ASTAR_HEURISTIC_COEFFICIENT = 1;
-};  // namespace dynamic
+#ifndef CONFIG_DYNAMIC
+#define CONFIG_DYNAMIC
 
-namespace alphabot {
-const double ARM_MAX_RPS = 2 * M_PI;
-const double ELEVATOR_MAX_RPS = 2 * M_PI;
-const double ARM_MAX_RPSS = .01;
-const double ELEVATOR_MAX_RPSS = .01;
+#define OBSTACLE_OFFSET 100.
+#define OBSTACLE_FIELD_REDUCTION .6
+#define ASTAR_HEURISTIC_COEFFICIENT 1.
 
-const double ROBOT_WIDTH = .7;
-const double ROBOT_HEIGHT = .2;
-const double ROBOT_2_L1_FRONT = .05;
+#endif  // CONFIG_DYNAMIC
 
-const double ELEVATOR_2_L1_FRONT = .4;
-const double ELEVATOR_2_GROUND = .2;
-const double ELEVATOR_2_GROUND_ANGLE = 80.;
-const double ELEVATOR_SIN_ANGLE = sin(ELEVATOR_2_GROUND_ANGLE / 180 * M_PI);
-const double ELEVATOR_COS_ANGLE = cos(ELEVATOR_2_GROUND_ANGLE / 180 * M_PI);
+#ifndef CONFIG_BOT
+#define CONFIG_BOT
+#define CONFIG_BETABOT
+#endif  // CONFIG_BOT
 
-const double ELEVATOR_MIN_POSITION = 0;
-const double ELEVATOR_MAX_POSITION = 2.;
-const double ELEVATOR_GRID_SIZE = .05;
-const int ELEVATOR_GRID_NUMS =
-    floor((ELEVATOR_MAX_POSITION - ELEVATOR_MIN_POSITION) /
-          ELEVATOR_GRID_SIZE) +
-    1;
-const double ELEVATOR_REDUCTION = 1.;
-const double ELEVATOR_ROTATION_2_POSITION = 1. / 2 / M_PI;
-const double ELEVATOR_VMAX =
-    ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
-const double ELEVATOR_AMAX =
-    ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
+#ifndef CONFIG_BETABOT
+#define CONFIG_BETABOT
+#endif  // CONFIG_BETABOT
 
-const double ARM_MIN_THETA_ROTATION = 0;
-const double ARM_MAX_THETA_ROTATION = 350;
-const double ARM_MIN_THETA_RADIAN = ARM_MIN_THETA_ROTATION / 180 * M_PI;
-const double ARM_MAX_THETA_RADIAN = ARM_MAX_THETA_ROTATION / 180 * M_PI;
-const double ARM_GRID_SIZE = .1;
-const int ARM_GRID_NUMS =
-    floor((ARM_MAX_THETA_RADIAN - ARM_MIN_THETA_RADIAN) / ARM_GRID_SIZE) + 1;
-const double ARM_REDUCTION = 1.;
-const double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION;
-const double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION;
+#ifndef CONFIG_ALPHABOT
+#define CONFIG_ALPHABOT
 
-const double ARM_MAX_VOLTAGE = 12;
-const double ARM_Kv = 1;
-const double ARM_Ka = 1;
-const double ELEVATOR_MAX_VOLTAGE = 12;
-const double ELEVATOR_Kv = 1;
-const double ELEVATOR_Ka = 1;
-};  // namespace alphabot
+#define ARM_MAX_RPS (2 * M_PI)
+#define ELEVATOR_MAX_RPS (2 * M_PI)
+#define ARM_MAX_RPSS 0.01
+#define ELEVATOR_MAX_RPSS 0.01
 
-namespace static {
-  const double L1_FRONT_HEIGHT = .454;
-  const double L1_BACK_HEIGHT = .514;
-  const double L1_FRONT_2_L1_BACK = .248;
-  const double L1_BACK_2_REEF_CENTER = .832 - L1_FRONT_2_L1_BACK;
-  const double REEF_CENTER_HEIGHT = 1.2;
+#define ROBOT_WIDTH 0.7
+#define ROBOT_HEIGHT 0.2
+#define ROBOT_2_L1_FRONT 0.05
 
-  const double BRANCH_DIAMETER = .042;
-  const double BRANCH_UL_X = .296;
-  const double BRANCH_UL_Y = 1.35;
-  const double BRANCH_UR_X = BRANCH_UL_X + BRANCH_DIAMETER;
-  const double BRANCH_UR_Y = BRANCH_UL_Y;
-  const double BRANCH_LR_X = BRANCH_UR_X;
-  const double BRANCH_LR_Y = .0;
-  const double BRANCH_LL_X = BRANCH_UL_X;
-  const double BRANCH_LL_Y = BRANCH_LR_Y;
+#define ELEVATOR_2_L1_FRONT 0.4
+#define ELEVATOR_2_GROUND 0.2
+#define ELEVATOR_2_GROUND_ANGLE 80.0
+#define ELEVATOR_SIN_ANGLE sin(ELEVATOR_2_GROUND_ANGLE / 180 * M_PI)
+#define ELEVATOR_COS_ANGLE cos(ELEVATOR_2_GROUND_ANGLE / 180 * M_PI)
 
-  const double L4_UL_X = .030;
-  const double L4_UL_Y = 1.810;
-  const double L4_UR_X = L4_UL_X + BRANCH_DIAMETER;
-  const double L4_UR_Y = L4_UL_Y;
-  const double L4_LR_X = L4_UR_X;
-  const double L4_LR_Y = L4_UR_Y - .173;
-  const double L4_LL_X = L4_UL_X;
-  const double L4_LL_Y = L4_LR_Y;
+#define ELEVATOR_MIN_POSITION 0
+#define ELEVATOR_MAX_POSITION 2.0
+#define ELEVATOR_GRID_SIZE 0.05
+#define ELEVATOR_GRID_NUMS (floor((ELEVATOR_MAX_POSITION - ELEVATOR_MIN_POSITION) / ELEVATOR_GRID_SIZE) + 1)
+#define ELEVATOR_REDUCTION 1.0
+#define ELEVATOR_ROTATION_2_POSITION (1.0 / 2 / M_PI)
+#define ELEVATOR_VMAX (ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION)
+#define ELEVATOR_AMAX (ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION)
 
-  const double L3_UL_X = .053;
-  const double L3_UL_Y = 1.194;
-  const double L3_LL_X = .029;
-  const double L3_LL_Y = 1.16;
-  const double L3_UR_X = BRANCH_LL_X;
-  const double L3_UR_Y = 1.024;
-  const double L3_LR_X = BRANCH_LL_X;
-  const double L3_LR_Y = .973;
+#define ARM_MIN_THETA_ROTATION 0
+#define ARM_MAX_THETA_ROTATION 350
+#define ARM_MIN_THETA_RADIAN (ARM_MIN_THETA_ROTATION / 180 * M_PI)
+#define ARM_MAX_THETA_RADIAN (ARM_MAX_THETA_ROTATION / 180 * M_PI)
+#define ARM_GRID_SIZE 0.1
+#define ARM_GRID_NUMS (floor((ARM_MAX_THETA_RADIAN - ARM_MIN_THETA_RADIAN) / ARM_GRID_SIZE) + 1)
+#define ARM_REDUCTION 1.0
+#define ARM_VMAX (ARM_MAX_RPS / ARM_REDUCTION)
+#define ARM_AMAX (ARM_MAX_RPSS / ARM_REDUCTION)
 
-  const double L2_UL_X = L3_UL_X;
-  const double L2_UL_Y = .79;
-  const double L2_LL_X = L3_LL_X;
-  const double L2_LL_Y = L2_UL_Y - (L3_UL_Y - L3_LL_Y);
-  const double L2_UR_X = L3_UR_X;
-  const double L2_UR_Y = L2_UL_Y - (L3_UL_Y - L3_UR_Y);
-  const double L2_LR_X = L3_LR_X;
-  const double L2_LR_Y = L2_LL_Y - (L3_LL_Y - L3_LR_Y);
+#define ARM_MAX_VOLTAGE 12
+#define ARM_Kv 1
+#define ARM_Ka 1
+#define ELEVATOR_MAX_VOLTAGE 12
+#define ELEVATOR_Kv 1
+#define ELEVATOR_Ka 1
 
-  const double ALGAE_HIGH_CENTER_X = .7;
-  const double ALGAE_HIGH_CENTER_Y = 1.2;
-  const double ALGAE_LOW_CENTER_X = ALGAE_HIGH_CENTER_X;
-  const double ALGAE_LOW_CENTER_Y = .4;
-  const double ALGAE_RADIUS = .41;
-};  // namespace static
+#endif  // CONFIG_ALPHABOT
+
+#ifndef CONFIG_ENV
+#define CONFIG_ENV
+
+#define L1_FRONT_HEIGHT 0.454
+#define L1_BACK_HEIGHT 0.514
+#define L1_FRONT_2_L1_BACK 0.248
+#define L1_BACK_2_REEF_CENTER (0.832 - L1_FRONT_2_L1_BACK)
+#define REEF_CENTER_HEIGHT 1.2
+
+#define BRANCH_DIAMETER 0.042
+#define BRANCH_UL_X 0.296
+#define BRANCH_UL_Y 1.35
+#define BRANCH_UR_X (BRANCH_UL_X + BRANCH_DIAMETER)
+#define BRANCH_UR_Y BRANCH_UL_Y
+#define BRANCH_LR_X BRANCH_UR_X
+#define BRANCH_LR_Y 0.0
+#define BRANCH_LL_X BRANCH_UL_X
+#define BRANCH_LL_Y BRANCH_LR_Y
+
+#define L4_UL_X 0.030
+#define L4_UL_Y 1.810
+#define L4_UR_X (L4_UL_X + BRANCH_DIAMETER)
+#define L4_UR_Y L4_UL_Y
+#define L4_LR_X L4_UR_X
+#define L4_LR_Y (L4_UR_Y - 0.173)
+#define L4_LL_X L4_UL_X
+#define L4_LL_Y L4_LR_Y
+
+#define L3_UL_X 0.053
+#define L3_UL_Y 1.194
+#define L3_LL_X 0.029
+#define L3_LL_Y 1.16
+#define L3_UR_X BRANCH_LL_X
+#define L3_UR_Y 1.024
+#define L3_LR_X BRANCH_LL_X
+#define L3_LR_Y 0.973
+
+#define L2_UL_X L3_UL_X
+#define L2_UL_Y 0.79
+#define L2_LL_X L3_LL_X
+#define L2_LL_Y (L2_UL_Y - (L3_UL_Y - L3_LL_Y))
+#define L2_UR_X L3_UR_X
+#define L2_UR_Y (L2_UL_Y - (L3_UL_Y - L3_UR_Y))
+#define L2_LR_X L3_LR_X
+#define L2_LR_Y (L2_LL_Y - (L3_LL_Y - L3_LR_Y))
+
+#define ALGAE_HIGH_CENTER_X 0.7
+#define ALGAE_HIGH_CENTER_Y 1.2
+#define ALGAE_LOW_CENTER_X ALGAE_HIGH_CENTER_X
+#define ALGAE_LOW_CENTER_Y 0.4
+#define ALGAE_RADIUS 0.41
+
+#endif  // CONFIG_ENV
 
 #endif  // CONFIG_H
