@@ -4,226 +4,174 @@
 #include <cmath>
 #include <eigen3/Eigen/Eigen>
 
+#include "Logger.hpp"
 #include "config.h"
 #include "lbfgs.hpp"
 #include "spline.hpp"
+#include "utils.hpp"
+
+#define BETA 1e3
+#define GAMMA .1
 
 class Topp {
  private:
-  void projection(Eigen::VectorXd& P_k, const Eigen::VectorXd& v) {
-    if (v.rows() == 1) {
-      P_k(0) = v(0);
-      return;
-    }
-    if (v(0) > v.tail(v.rows() - 1).norm()) {
-      P_k(0) = v(0);
-      P_k.tail(v.rows() - 1) = v.tail(v.rows() - 1);
-      return;
-    } else if (v(0) < -v.tail(v.rows() - 1).norm()) {
-      return;
-    } else {
-      P_k(0) = v.tail(v.rows() - 1).norm();
-      P_k.tail(v.rows() - 1) = v.tail(v.rows() - 1);
-      P_k *= (v(0) + v.tail(v.rows() - 1).norm()) / 2 /
-             v.tail(v.rows() - 1).norm();
-      return;
-    }
-    return;
-  }
-
-  void gradient() {
-    grad = f;
-    int n_conic = A[0].rows(), n_eq = G.rows(), n_neq = P.rows();
-    grad += rho * G.transpose() * (G * x - h + lambda / rho);
-    for (int i = 0; i < A.size(); ++i) {
-      Eigen::VectorXd Pconic = Eigen::VectorXd::Zero(n_conic),
-                      conic = mu[i] / rho - A[i] * x - b[i];
-      projection(Pconic, conic);
-      grad -= rho * A[i].transpose() * Pconic;
-    }
-    Eigen::VectorXd Px_q = P * x - q + eta / rho;
-    for (int i = 0; i < P.rows(); ++i) {
-      Px_q(i) = std::max(0.0, Px_q(i));
-    }
-    grad += rho * P.transpose() * Px_q;
-  }
-
-  double loss() {
-    double res = 0;
-    res += f.dot(x);
-    int n_conic = A[0].rows(), n_eq = G.rows(), n_neq = P.rows();
-    res += rho / 2 * (G * x - h + lambda / rho).squaredNorm();
-    for (int i = 0; i < A.size(); ++i) {
-      Eigen::VectorXd Pconic = Eigen::VectorXd::Zero(n_conic),
-                      conic = mu[i] / rho - A[i] * x - b[i];
-      projection(Pconic, conic);
-      res += rho / 2 * Pconic.squaredNorm();
-    }
-    for (int i = 0; i < P.rows(); ++i) {
-      res += rho / 2 * std::max(0.0, (P.row(i) * x - q(i) + eta(i) / rho));
-    }
-    return res;
-  }
+  std::vector<Eigen::Vector2d> points;
+  int n;
+  int iter;
+  lbfgs::lbfgs_parameter_t params;
 
   /**
-   * a:    0 ~  n-1
-   * b:  n   ~ 2n
-   * c: 2n+1 ~ 3n+1
-   * d: 3n+2 ~ 4n+1
+   * spline parameters
    */
-  Eigen::VectorXd x, f, h, q, lambda, eta, grad, arc, qx1, qx2, qy1, qy2, ax,
-      ay, bx, by, cx, cy, dx, dy;
-  Eigen::MatrixXd G, P;
-  std::vector<Eigen::MatrixXd> A;
-  std::vector<Eigen::VectorXd> b, mu;
-  double rho;
-  int iter = 0;
+  Eigen::VectorXd qt, qr, qt1, qr1, qt2, qr2, arc;
+  Eigen::VectorXd qta, qtb, qtc, qtd, qra, qrb, qrc, qrd;
 
-  static double loss(void* instance, const Eigen::VectorXd& x,
-                     Eigen::VectorXd& grad) {
-    Topp* topp = (Topp*)instance;
-    topp->x = x;
-    topp->gradient();
-    grad = topp->grad;
-    return topp->loss();
-  }
+  /**
+   * optimization variables
+   * a:  0   ~  n-1  (n)
+   * b:  n   ~  2n   (n+1)
+   * c: 2n+1 ~ 3n+1  (n+1)
+   * d: 3n+2 ~ 4n+1  (n)
+   * e: 4n+2 ~ 5n+2  (n+1)
+   */
+  Eigen::VectorXd x, g;
+  int n_var;
+
+  /**
+   * linear coefficients
+   */
+  Eigen::VectorXd f;
+
+  /**
+   * second order cone constraints
+   */
+  std::vector<Eigen::MatrixXd> As;
+  std::vector<Eigen::VectorXd> bs;
+  int n_soc;
+
+  /**
+   * linear equality constraints
+   */
+  Eigen::MatrixXd G;
+  Eigen::VectorXd h;
+  int n_eq;
+
+  /**
+   * linear inequality constraints
+   */
+  Eigen::MatrixXd P;
+  Eigen::VectorXd q;
+  int n_ineq;
+
+  /**
+   * quadratic equality constraints
+   */
+  std::vector<Eigen::MatrixXd> Js;
+  std::vector<Eigen::VectorXd> rs;
+  int n_quadeq;
+
+  /**
+   * dual variables
+   */
+  double rho;
+  Eigen::VectorXd lambda, eta;
+  std::vector<Eigen::VectorXd> mus;
 
  public:
-  Topp() {}
-  Topp(const std::vector<Eigen::Vector2d>& points) {
-    int n = points.size() - 1;
-
-    Eigen::VectorXd qx(n + 1), qy(n + 1);
-    for (int i = 0; i <= n; ++i) {
-      qx(i) = points[i](0), qy(i) = points[i](1);
+  Topp(const std::vector<Eigen::Vector2d>& points, bool solve = true,
+       int maxIter = 30) {
+    this->points = points;
+    this->n = points.size() - 1;
+    this->iter = 0;
+    this->setup();
+    if (solve) {
+      this->solve(maxIter);
     }
-    spline::cubic(qx, ax, bx, cx, dx);
-    spline::cubic(qy, ay, by, cy, dy);
+  }
 
-    qx1 = Eigen::VectorXd::Zero(n + 1), qy1 = Eigen::VectorXd::Zero(n + 1),
-    qx2 = Eigen::VectorXd::Zero(n + 1), qy2 = Eigen::VectorXd::Zero(n + 1);
+  void solve(int maxIter = 30) {
+    Logger::getInstance()->log(LogLevel::INFO, "TOPP",
+                               "Solving TOPP problem...");
+    double cost;
+    for (int iter = 0; iter < maxIter; ++iter) {
+      this->iter++;
+      lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
+
+      // update dual variables
+      mus = socProjections(mus - rho * (As * x + bs));
+      lambda = lambda + rho * (G * x - h);
+      eta = max(eta + rho * (P * x - q), 0);
+      rho = std::min(rho * (1 + GAMMA), BETA);
+
+      Logger::getInstance()->log(LogLevel::DEBUG, "TOPP", "iter: " + std::to_string(this->iter) + ", cost: " + std::to_string(cost));
+    }
+
+    Logger::getInstance()->log(LogLevel::INFO, "TOPP", "TOPP problem solved.");
+  }
+
+  int getIter() { return iter; }
+  double getLoss() {
+    return f.dot(x) +
+           rho / 2 * ((G * x - h - lambda / rho).squaredNorm() + squaredNorm(x.transpose() * Js * x - rs * x) + (max(P * x - q + eta / rho, 0)).squaredNorm() + squaredNorm(socProjections(mus / rho - As * x - bs)));
+  }
+  void get() {}
+
+ private:
+  void setup() {
+    Logger::getInstance()->log(LogLevel::INFO, "TOPP",
+                               "Setting up TOPP problem...");
+    // get spline parameters
+    qt = Eigen::VectorXd::Zero(n + 1), qr = Eigen::VectorXd::Zero(n + 1);
+    for (int i = 0; i <= n; ++i) {
+      qt(i) = points[i](0), qr(i) = points[i](1);
+    }
+    spline::cubic(qt, qta, qtb, qtc, qtd);
+    spline::cubic(qr, qra, qrb, qrc, qrd);
+
+    qt1 = Eigen::VectorXd::Zero(n + 1), qr1 = Eigen::VectorXd::Zero(n + 1),
+    qt2 = Eigen::VectorXd::Zero(n + 1), qr2 = Eigen::VectorXd::Zero(n + 1);
     arc = Eigen::VectorXd::Zero(n);
     for (int i = 0; i < n; ++i) {
-      qx1(i) = cx(i);
-      qy1(i) = cy(i);
-      qx2(i) = 2 * bx(i);
-      qy2(i) = 2 * by(i);
+      qt1(i) = qtc(i), qr1(i) = qrc(i);
+      qt2(i) = 2 * qtb(i), qr2(i) = 2 * qrb(i);
       for (double u = .01; u < 1; u += .01) {
-        arc(i) += .01 * sqrt(pow(3 * ax(i) * u * u + 2 * bx(i) * u + cx(i), 2) +
-                             pow(3 * ay(i) * u * u + 2 * by(i) * u + cy(i), 2));
+        arc(i) +=
+            .01 * sqrt(pow(3 * qta(i) * u * u + 2 * qtb(i) * u + qtc(i), 2) +
+                       pow(3 * qra(i) * u * u + 2 * qrb(i) * u + qrc(i), 2));
       }
-      arc(i) += .005 * (sqrt(pow(3 * ax(i) + 2 * bx(i) + cx(i), 2) +
-                             pow(3 * ay(i) + 2 * by(i) + cy(i), 2)) +
-                        sqrt(cx(i) * cx(i) + cy(i) * cy(i)));
+      arc(i) += .005 * (sqrt(pow(3 * qta(i) + 2 * qtb(i) + qtc(i), 2) +
+                             pow(3 * qra(i) + 2 * qrb(i) + qrc(i), 2)) +
+                        sqrt(qtc(i) * qtc(i) + qrc(i) * qrc(i)));
     }
-    qx1(n) = 3 * ax(n - 1) + 2 * bx(n - 1) + cx(n - 1);
-    qy1(n) = 3 * ay(n - 1) + 2 * by(n - 1) + cy(n - 1);
-    qx2(n) = 6 * ax(n - 1) + 2 * bx(n - 1);
-    qy2(n) = 6 * ax(n - 1) + 2 * by(n - 1);
+    qt1(n) = 3 * qta(n - 1) + 2 * qtb(n - 1) + qtc(n - 1);
+    qr1(n) = 3 * qra(n - 1) + 2 * qrb(n - 1) + qrc(n - 1);
+    qt2(n) = 6 * qta(n - 1) + 2 * qtb(n - 1);
+    qr2(n) = 6 * qra(n - 1) + 2 * qrb(n - 1);
 
-    f = Eigen::VectorXd::Zero(4 * n + 2);
-    x = Eigen::VectorXd::Zero(4 * n + 2);
-    G = Eigen::MatrixXd::Zero(n + 4, 4 * n + 2);
-    h = Eigen::VectorXd::Zero(n + 4);
-    P = Eigen::MatrixXd::Zero(7 * n + 3, 4 * n + 2);
-    q = Eigen::VectorXd::Zero(7 * n + 3);
+    // initialize lbfgs params
+    params.g_epsilon = 1.0e-8;
+    params.past = 3;
+    params.delta = 1.0e-8;
 
-    Eigen::MatrixXd A_;
-    Eigen::VectorXd b_, c_;
-    A.clear(), b.clear();
+    // initialize optimization variables
+    n_var = 5 * n + 3;
+    x = Eigen::VectorXd::Zero(n_var);
+    g = Eigen::VectorXd::Zero(n_var);
 
     /**
-     * a:    0 ~  n-1
-     * b:  n   ~ 2n
-     * c: 2n+1 ~ 3n+1
-     * d: 3n+2 ~ 4n+1
+     * initialize linear coefficients
+     * \sum 2 * (s_{k+1} - s_k) * d_k
      */
+    f = Eigen::VectorXd::Zero(n_var);
     for (int i = 0; i < n; ++i) {
-      /**
-       * \Sum 2(s_{k+1} - s_k) * d_k
-       */
       f(3 * n + 2 + i) = 2 * arc(i);
-
-      /**
-       * ||  2*c_k  ||
-       * ||         || <= b_k + 1
-       * || b_k - 1 ||
-       *
-       * || b_k + 1 ||
-       * ||  2*c_k  || in Q
-       * || b_k - 1 ||
-       */
-      A_ = Eigen::MatrixXd::Zero(3, 4 * n + 2);
-      b_ = Eigen::VectorXd::Zero(3);
-      c_ = Eigen::VectorXd::Zero(4 * n + 2);
-      A_(0, n + i) = 1;
-      A_(1, 2 * n + 1 + i) = 2;
-      A_(2, n + i) = 1;
-      b_(0) = 1;
-      b_(2) = -1;
-      A.push_back(A_), b.push_back(b_);
-      /**
-       * ||          2          ||
-       * ||                     || <= c_{k+1} + c_k + d_k
-       * || c_{k+1} + c_k - d_k ||
-       *
-       * || c_{k+1} + c_k + d_k ||
-       * ||          2          || in Q
-       * || c_{k+1} + c_k - d_k ||
-       */
-      A_ = Eigen::MatrixXd::Zero(3, 4 * n + 2);
-      b_ = Eigen::VectorXd::Zero(3);
-      A_(0, 2 * n + 1 + i) = 1;
-      A_(0, 2 * n + 2 + i) = 1;
-      A_(0, 3 * n + 2 + i) = 1;
-      A_(2, 2 * n + 1 + i) = 1;
-      A_(2, 2 * n + 2 + i) = 1;
-      A_(2, 3 * n + 2 + i) = -1;
-      b_(1) = 2;
-      A.push_back(A_), b.push_back(b_);
-
-      /**
-       * 2(s_{k+1} - s_k) * a_k + b_k - b_{k+1} = 0
-       */
-      G(i, i) = 2 * arc(i);
-      G(i, n + i) = 1;
-      G(i, n + i + 1) = -1;
-      // h(i) = 0;
-
-      /**
-       * -b_k <= 0
-       */
-      P(7 * i, n + i) = -1;
-      // q(7 * i) = 0;
-
-      /**
-       * q'_x(s_k)^2 * b_k <= vmax^2
-       * q'_y(s_k)^2 * b_k <= vmax^2
-       */
-      P(7 * i + 1, n + i) = qx1(i) * qx1(i);
-      P(7 * i + 2, n + i) = qy1(i) * qy1(i);
-      q(7 * i + 1) = config::ELEVATOR_VMAX * config::ELEVATOR_VMAX;
-      q(7 * i + 2) = config::ARM_VMAX * config::ARM_VMAX;
-
-      /**
-       *  q''_x(s_k)^2 * b_k + q'_x(s_k) * a_k <= amax
-       *  q''_y(s_k)^2 * b_k + q'_y(s_k) * a_k <= amax
-       * -q''_x(s_k)^2 * b_k - q'_x(s_k) * a_k <= amax
-       * -q''_y(s_k)^2 * b_k - q'_y(s_k) * a_k <= amax
-       */
-      P(7 * i + 3, n + i) = qx2(i) * qx2(i);
-      P(7 * i + 4, n + i) = qy2(i) * qy2(i);
-      P(7 * i + 5, n + i) = -qx2(i) * qx2(i);
-      P(7 * i + 6, n + i) = -qy2(i) * qy2(i);
-      P(7 * i + 3, i) = qx1(i);
-      P(7 * i + 4, i) = qy1(i);
-      P(7 * i + 5, i) = -qx1(i);
-      P(7 * i + 6, i) = -qy1(i);
-      q(7 * i + 3) = config::ELEVATOR_AMAX;
-      q(7 * i + 4) = config::ARM_AMAX;
-      q(7 * i + 5) = config::ELEVATOR_AMAX;
-      q(7 * i + 6) = config::ARM_AMAX;
     }
+
+    /**
+     * initialize second order cone constraints
+     */
+    As.clear(), bs.clear();
+    n_soc = 2 * n + 1;
 
     /**
      * ||  2*c_k  ||
@@ -234,23 +182,166 @@ class Topp {
      * ||  2*c_k  || in Q
      * || b_k - 1 ||
      */
-    A_ = Eigen::MatrixXd::Zero(3, 4 * n + 2);
-    b_ = Eigen::VectorXd::Zero(3);
-    A_(0, 2 * n) = 1;
-    A_(1, 3 * n + 1) = 2;
-    A_(2, 2 * n) = 1;
-    b_(2) = -1;
-    A.push_back(A_);
-    b.push_back(b_);
+    for (int i = 0; i <= n; ++i) {
+      Eigen::MatrixXd A_(3, n_var);
+      Eigen::VectorXd b_(3);
+      A_(0, n + i) = 1;          // b_k
+      A_(1, 2 * n + 1 + i) = 2;  // c_k
+      A_(2, n + i) = 1;          // b_k
+      b_(0) = 1;
+      b_(2) = -1;
+      As.push_back(A_);
+      bs.push_back(b_);
+    }
 
     /**
-     * (q'_x(s_0)^2 + q'_y(s_0)^2) * b_0 = vstart^2
-     * (q'_x(s_k)^2 + q'_y(s_k)^2) * b_n = vend^2
+     * ||          2          ||
+     * ||                     || <= c_{k+1} + c_k + d_k
+     * || c_{k+1} + c_k - d_k ||
+     *
+     * || c_{k+1} + c_k + d_k ||
+     * ||          2          || in Q
+     * || c_{k+1} + c_k - d_k ||
      */
-    G(n, n) = qx1(0) * qx1(0);
-    G(n + 1, n) = qy1(0) * qy1(0);
-    G(n + 2, 2 * n) = qx1(n) * qx1(n);
-    G(n + 3, 2 * n) = qy1(n) * qy1(n);
+    for (int i = 0; i < n; ++i) {
+      Eigen::MatrixXd A_(3, n_var);
+      Eigen::VectorXd b_(3);
+      A_(0, 2 * n + 1 + i) = 1;   // c_k
+      A_(0, 2 * n + 2 + i) = 1;   // c_{k+1}
+      A_(0, 3 * n + 2 + i) = 1;   // d_k
+      A_(2, 2 * n + 1 + i) = 1;   // c_k
+      A_(2, 2 * n + 2 + i) = 1;   // c_{k+1}
+      A_(2, 3 * n + 2 + i) = -1;  // d_k
+      b_(1) = 2;
+      As.push_back(A_);
+      bs.push_back(b_);
+    }
+
+    /**
+     * initialize linear equality constraints
+     */
+    n_eq = n + 4;
+    G = Eigen::MatrixXd::Zero(n_eq, n_var);
+    h = Eigen::VectorXd::Zero(n_eq);
+
+    /**
+     * kinematic constraints
+     * 2(s_{k+1} - s_k) * a_k + b_k - b_{k+1} = 0
+     */
+    for (int i = 0; i < n; ++i) {
+      G(i, i) = 2 * arc(i);  // 2(s_{k+1} - s_k)
+      G(i, n + i) = 1;       // b_k
+      G(i, n + i + 1) = -1;  // b_{k+1}
+    }
+
+    /**
+     * boundary constraints
+     * b_0 = 0
+     * b_n = 0
+     * e_0 = 0
+     * e_n = 0
+     */
+    G(n, n) = 1;              // b_0
+    G(n + 1, 2 * n) = 1;      // b_n
+    G(n + 2, 4 * n + 2) = 1;  // e_0
+    G(n + 3, 5 * n + 2) = 1;  // e_n
+
+    /**
+     * initialize linear inequality constraints
+     */
+    n_ineq = 11 * n + 3;
+    P = Eigen::MatrixXd::Zero(n_ineq, n_var);
+    q = Eigen::VectorXd::Zero(n_ineq);
+
+    /**
+     * always forward
+     * -b_k <= 0
+     */
+    for (int i = 0; i <= n; ++i) {
+      P(i, n + i) = -1;  // b_k
+    }  // end at n
+
+    /**
+     * velocity constraints
+     * q'_t(s_k)^2 * b_k <= vt_max^2
+     * q'_r(s_k)^2 * b_k <= vr_max^2
+     */
+    for (int i = 0; i <= n; ++i) {
+      P(n + 1 + 2 * i, n + i) = qt1(i) * qt1(i);  // b_k
+      P(n + 2 + 2 * i, n + i) = qr1(i) * qr1(i);  // b_k
+      q(n + 1 + 2 * i) = alphabot::ELEVATOR_VMAX * alphabot::ELEVATOR_VMAX;
+      q(n + 2 + 2 * i) = alphabot::ARM_VMAX * alphabot::ARM_VMAX;
+    }  // end at 3n+2
+
+    /**
+     * acceleration constraints
+     * +q''_t(s_k)^2 * b_k + q'_t(s_k) * a_k <= at_max
+     * -q''_t(s_k)^2 * b_k - q'_t(s_k) * a_k <= at_max
+     * +q''_r(s_k)^2 * b_k + q'_r(s_k) * a_k <= ar_max
+     * -q''_r(s_k)^2 * b_k - q'_r(s_k) * a_k <= ar_max
+     */
+    for (int i = 0; i < n; ++i) {
+      P(3 * n + 3 + 4 * i, n + i) = qt2(i) * qt2(i);   // b_k
+      P(3 * n + 4 + 4 * i, n + i) = -qt2(i) * qt2(i);  // b_k
+      P(3 * n + 5 + 4 * i, n + i) = qr2(i) * qr2(i);   // b_k
+      P(3 * n + 6 + 4 * i, n + i) = -qr2(i) * qr2(i);  // b_k
+      P(3 * n + 3 + 4 * i, i) = qt1(i);                // a_k
+      P(3 * n + 4 + 4 * i, i) = -qt1(i);               // a_k
+      P(3 * n + 5 + 4 * i, i) = qr1(i);                // a_k
+      P(3 * n + 6 + 4 * i, i) = -qr1(i);               // a_k
+      q(3 * n + 3 + 4 * i) = alphabot::ELEVATOR_AMAX;
+      q(3 * n + 4 + 4 * i) = alphabot::ELEVATOR_AMAX;
+      q(3 * n + 5 + 4 * i) = alphabot::ARM_AMAX;
+      q(3 * n + 6 + 4 * i) = alphabot::ARM_AMAX;
+    }  // end at 7n+2
+
+    /**
+     * voltage constraints
+     * +Kv * q'_t(s_k) * e_k + Ka * q''_t(s_k) * a_k + Ka * q'_t(s_k) * b_k <= V_max
+     * -Kv * q'_t(s_k) * e_k - Ka * q''_t(s_k) * a_k - Ka * q'_t(s_k) * b_k <= V_max
+     * +Kv * q'_r(s_k) * e_k + Ka * q''_r(s_k) * a_k + Ka * q'_r(s_k) * b_k <= V_max
+     * -Kv * q'_r(s_k) * e_k - Ka * q''_r(s_k) * a_k - Ka * q'_r(s_k) * b_k <= V_max
+     */
+    for (int i = 0; i < n; ++i) {
+      P(7 * n + 3 + 4 * i, 4 * n + 2 + i) = alphabot::ELEVATOR_Kv * qt1(i);   // e_k
+      P(7 * n + 4 + 4 * i, 4 * n + 2 + i) = -alphabot::ELEVATOR_Kv * qt1(i);  // e_k
+      P(7 * n + 5 + 4 * i, 4 * n + 2 + i) = alphabot::ARM_Kv * qr1(i);        // e_k
+      P(7 * n + 6 + 4 * i, 4 * n + 2 + i) = -alphabot::ARM_Kv * qr1(i);       // e_k
+      P(7 * n + 3 + 4 * i, i) = alphabot::ARM_Ka * qt2(i);                    // a_k
+      P(7 * n + 4 + 4 * i, i) = -alphabot::ARM_Ka * qt2(i);                   // a_k
+      P(7 * n + 5 + 4 * i, i) = alphabot::ELEVATOR_Ka * qr2(i);               // a_k
+      P(7 * n + 6 + 4 * i, i) = -alphabot::ELEVATOR_Ka * qr2(i);              // a_k
+      P(7 * n + 3 + 4 * i, n + i) = alphabot::ELEVATOR_Ka * qt1(i);           // b_k
+      P(7 * n + 4 + 4 * i, n + i) = -alphabot::ELEVATOR_Ka * qt1(i);          // b_k
+      P(7 * n + 5 + 4 * i, n + i) = alphabot::ARM_Ka * qr1(i);                // b_k
+      P(7 * n + 6 + 4 * i, n + i) = -alphabot::ARM_Ka * qr1(i);               // b_k
+      q(7 * n + 3 + 4 * i) = alphabot::ELEVATOR_MAX_VOLTAGE;
+      q(7 * n + 4 + 4 * i) = alphabot::ELEVATOR_MAX_VOLTAGE;
+      q(7 * n + 5 + 4 * i) = alphabot::ARM_MAX_VOLTAGE;
+      q(7 * n + 6 + 4 * i) = alphabot::ARM_MAX_VOLTAGE;
+    }  // end at 11n+2
+
+    /**
+     * initialize quadratic equality constraints
+     */
+    n_quadeq = n + 1;
+    Js.clear(), rs.clear();
+
+    /**
+     * e_k * e_k = b_k
+     */
+    for (int i = 0; i <= n; ++i) {
+      Eigen::MatrixXd J_ = Eigen::MatrixXd::Zero(n_var, n_var);
+      Eigen::VectorXd r_ = Eigen::VectorXd::Zero(n_var);
+      J_(4 * n + 2 + i, 4 * n + 2 + i) = 1;  // e_k
+      r_(n + i) = 1;                         // b_k
+    }
+
+    // initialize dual variables
+    mus = std::vector<Eigen::VectorXd>(n_soc, Eigen::VectorXd::Zero(3));
+    lambda = Eigen::VectorXd::Zero(n_eq);
+    eta = Eigen::VectorXd::Zero(n_ineq);
+    rho = 1;
 
     /**
      * -b_k <= 0
@@ -270,52 +361,24 @@ class Topp {
     lambda = Eigen::VectorXd::Zero(G.rows());
     eta = Eigen::VectorXd::Zero(P.rows());
   }
+  
+  static double loss(void* instance, const Eigen::VectorXd& optX,
+                     Eigen::VectorXd& optG) {
+    Topp* self = static_cast<Topp*>(instance);
 
-  bool step() {
-    ++iter;
-    double cost;
-    lbfgs::lbfgs_parameter_t params;
-    params.g_epsilon = 1.0e-8;
-    params.past = 3;
-    params.delta = 1.0e-8;
-    lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
-    lambda = lambda + rho * (G * x - h);
-    for (int i = 0; i < A.size(); ++i) {
-      projection(mu[i], mu[i] - rho * (A[i] * x + b[i]));
-    }
-    eta = eta + rho * (P * x - q);
-    for (int i = 0; i < eta.rows(); ++i) {
-      eta(i) = std::max(0.0, eta(i));
-    }
-    rho = std::min(config::TOPP_BETA, rho * (1 + config::TOPP_GAMMA));
-    return iter >= config::TOPP_ITER;
-  }
+    std::vector<double> resQuadeqs = optX.transpose() * self->Js * optX - self->rs * optX;
+    std::vector<Eigen::VectorXd> resSocs = socProjections(self->mus / self->rho - self->As * optX - self->bs);
+    Eigen::VectorXd resEq = self->G * optX - self->h - self->lambda / self->rho;
+    Eigen::VectorXd resIneq = max(self->P * optX - self->q + self->eta / self->rho, 0);
 
-  double getLoss() { return loss(); }
-  int getIter() { return iter; }
-
-  void get(std::vector<double>& timestamp,
-           std::vector<Eigen::Vector2d>& velocity,
-           std::vector<Eigen::Vector2d>& acceleration) {
-    // TODO
-    timestamp.clear(), velocity.clear(), acceleration.clear();
-    int n = arc.rows();
-    Eigen::VectorXd a_k = x.segment(0, n);
-    Eigen::VectorXd b_k = x.segment(n, n + 1);
-    Eigen::VectorXd c_k = x.segment(2 * n + 1, n + 1);
-    Eigen::VectorXd d_k = x.segment(3 * n + 1, n);
-    timestamp.push_back(0);
-    for (int i = 0; i < n; ++i) {
-      timestamp.push_back(timestamp.back() +
-                          std::max(0.0, 2 * arc(i) * d_k(i)));
-      velocity.push_back(
-          Eigen::Vector2d(qx1(i) * sqrt(b_k(i)), qy1(i) * sqrt(b_k(i))));
-      acceleration.push_back(
-          Eigen::Vector2d(qx2(i) * b_k(i) + qx1(i) * a_k(i),
-                          qy2(i) * b_k(i) + qy1(i) * a_k(i)));
+    optG = self->f;
+    optG += self->rho * self->G.transpose() * resEq;
+    optG += self->rho * self->P.transpose() * resIneq;
+    optG += self->rho * sum(self->As * resSocs);
+    for (int i = 0; i < self->n_quadeq; ++i) {
+      optG += self->rho * self->Js[i].transpose() * self->Js[i] * optX * optX.transpose() - 2 * self->Js[i].transpose() * optX * self->rs[i].transpose() + self->rs[i] * self->rs[i].transpose();
     }
-    velocity.push_back(
-        Eigen::Vector2d(qx1(n) * sqrt(b_k(n)), qy1(n) * sqrt(b_k(n))));
-    return;
+
+    return self->f.dot(optX) + self->rho / 2 * (sum(resQuadeqs) + sum(squaredNorm(resSocs)) + resEq.squaredNorm() + resIneq.squaredNorm());
   }
 };

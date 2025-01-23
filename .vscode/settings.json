@@ -68,5 +68,5 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "csignal": "cpp"
-    }
+    }, "C_Cpp.clang_format_style": "{ BasedOnStyle: Google, IndentWidth: 2, ColumnLimit: 0 }"
 }
