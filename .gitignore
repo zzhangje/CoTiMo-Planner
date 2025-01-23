@@ -1,4 +1,5 @@
 build/*
 logs/*
-vcpkg_installed
+vcpkg
 build-windows
+build-linux
