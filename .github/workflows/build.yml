@@ -25,6 +25,17 @@ jobs:
       with:
         submodules: true
 
+    - name: Cache vcpkg
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/vcpkg
+          vcpkg/downloads
+          vcpkg/installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
+
     - name: Install CMake
       uses: lukka/get-cmake@latest
 
