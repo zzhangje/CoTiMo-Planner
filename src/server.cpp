@@ -14,13 +14,22 @@ class Service final : public ArmTrajectoryService::Service {
     auto* trajectory = response->mutable_trajectory();
     *trajectory->mutable_parameter() = *request;
     
+    const auto& start = request->start();
+    const auto& end = request->end();
+    
     for (int i = 0; i < 5; i++) {
+      double t = i / 4.0;
       auto* state = trajectory->add_states();
-      state->set_timestamp(i * 0.1);
+      state->set_timestamp(t);
       auto* pos = state->mutable_position();
-      pos->set_shoulderheightmeter(0.5 + i * 0.1);
-      pos->set_elbowpositiondegree(45.0 + i * 10.0);
+      pos->set_shoulderheightmeter(start.shoulderheightmeter() + (end.shoulderheightmeter() - start.shoulderheightmeter()) * t);
+      pos->set_elbowpositiondegree(start.elbowpositiondegree() + (end.elbowpositiondegree() - start.elbowpositiondegree()) * t);
+      
+      auto* current = state->mutable_current();
+      current->set_shouldercurrentamp(1.0);
+      current->set_elbowcurrentamp(0.8);
     }
+    log_info("Generated trajectory with %d points", trajectory->states_size());
     return Status::OK;
   }
 };
