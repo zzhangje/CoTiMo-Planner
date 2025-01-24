@@ -1,7 +1,7 @@
 #ifndef OBJECT_HPP
 #define OBJECT_HPP
 
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Eigen>
 
 #include "config.h"
 #include "log.hpp"

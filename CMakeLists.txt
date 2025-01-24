@@ -64,3 +64,7 @@ add_executable(test
 src/test.cpp
 ${HEADER_FILES}
 )
+
+target_link_libraries(test
+    Eigen3::Eigen
+)

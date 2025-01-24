@@ -5,7 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Eigen>
 
 namespace lbfgs {
 // ----------------------- Data Type Part -----------------------
