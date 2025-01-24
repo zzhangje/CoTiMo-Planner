@@ -71,10 +71,10 @@ constexpr double ARM_REDUCTION = 1.0;
 // constexpr double ELEVATOR_VMAX = ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
 // constexpr double ELEVATOR_AMAX = ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
 
-const double ARM_VMAX = 2;
-const double ARM_AMAX = 4;
-const double ELEVATOR_VMAX = 2;
-const double ELEVATOR_AMAX = 4;
+const double ARM_VMAX = 0x3f3f3f3f;
+const double ARM_AMAX = 0x3f3f3f3f;
+const double ELEVATOR_VMAX = 0x3f3f3f3f;
+const double ELEVATOR_AMAX = 0x3f3f3f3f;
 
 constexpr double ELEVATOR_GRID_SIZE = 0.05;
 constexpr double ARM_GRID_SIZE = 5;
