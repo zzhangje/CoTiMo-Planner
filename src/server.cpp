@@ -54,15 +54,29 @@ int main(int argc, char **argv) {
   // astar::samplePath(path, samplePath, 3);
 
   std::vector<Eigen::Vector2d> points;
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 5; ++i) {
     points.push_back(Eigen::Vector2d(i, i));
+  }
+  for (int i = 0; i < 5; ++i) {
+    points.push_back(Eigen::Vector2d(5 - i, 5 + i));
+  }
+  for (int i = 0; i < points.size(); ++i) {
+    points[i] = points[i] * 0.1;
   }
   // Toppp toppp(points);
   // for (int i = 0; i < 30; ++i) {
   //   toppp.step();
   // }
 
-  Topp topp(points);
+  Topp topp(points, 31);
+  log_info("Solving TOPP problem...");
+
+  std::vector<double> timestamp;
+  std::vector<Eigen::Vector2d> position, voltage, velocity, acceleration;
+  topp.getStates(timestamp, position, voltage, velocity, acceleration);
+  for (int i = 0; i < timestamp.size(); ++i) {
+    log_info("timestamp: %f, position: (%f, %f), voltage: (%f, %f), velocity: (%f, %f), acceleration: (%f, %f)", timestamp[i], position[i](0), position[i](1), voltage[i](0), voltage[i](1), velocity[i](0), velocity[i](1), acceleration[i](0), acceleration[i](1));
+  }
 
   while (!signalStatus) {
   }
