@@ -71,6 +71,8 @@
         "csignal": "cpp",
         "*.inc": "cpp",
         "any": "cpp",
+        "eigen": "cpp",
+        "any": "cpp",
         "barrier": "cpp",
         "cfenv": "cpp",
         "charconv": "cpp",

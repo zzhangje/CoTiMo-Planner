@@ -4,9 +4,22 @@
 #include <eigen3/Eigen/Eigen>
 
 #include "config.h"
+#include "log.hpp"
 
 using namespace config::alphabot;
 using namespace config::env;
+
+enum ObjectType {
+  ENV,
+  ARM,
+  ARM_ALGAE,
+  ARM_CORAL,
+  ARM_ALGAE_CORAL,
+  ARM_EXP,
+  ARM_EXP_ALGAE,
+  ARM_EXP_CORAL,
+  ARM_EXP_ALGAE_CORAL
+};
 
 class Segment {
  private:
@@ -49,72 +62,65 @@ class Object {
   double x, y, theta;
 
  public:
-  // env
-  Object() {
-    this->segments = std::vector<Segment>{
-        Segment(-ROBOT_2_L1_FRONT, ROBOT_HEIGHT,
-                -ROBOT_2_L1_FRONT - ROBOT_WIDTH,
-                ROBOT_HEIGHT),
-        Segment(0, 0, 0, L1_FRONT_HEIGHT),
-        Segment(0, L1_FRONT_HEIGHT, L1_FRONT_2_L1_BACK,
-                L1_BACK_HEIGHT),
-        Segment(L2_UL_X, L2_UL_Y, L2_UR_X,
-                L2_UR_Y),
-        Segment(L2_LL_X, L2_LL_Y, L2_LR_X,
-                L2_LR_Y),
-        Segment(L3_UL_X, L3_UL_Y, L3_UR_X,
-                L3_UR_Y),
-        Segment(L3_LL_X, L3_LL_Y, L3_LR_X,
-                L3_LR_Y),
-        Segment(L4_UL_X, L4_UL_Y, L4_LL_X,
-                L4_LL_Y),
-        Segment(BRANCH_UL_X, BRANCH_UL_Y, BRANCH_LL_X,
-                BRANCH_LL_Y),
-        Segment(BRANCH_UL_X, BRANCH_UL_Y, L4_LL_X,
-                L4_LL_Y),
-    };
-    this->x = 0;
-    this->y = 0;
-    this->theta = 0;
-  }
-  // arm
-  Object(bool isSafe, bool withAlgae, bool withCoral) {
-    if (isSafe) {
-      if (withAlgae && withCoral) {
-      } else if (withAlgae) {
-      } else if (withCoral) {
-      } else {
+  Object(ObjectType type, double t = 0, double r = 0) {
+    switch (type) {
+      case ObjectType::ENV: {
         this->segments = std::vector<Segment>{
-            Segment(-.25, .1, .25, .1),
-            Segment(.25, .1, .25, -.1),
-            Segment(.25, -.1, -.25, -.1),
-            Segment(-.25, -.1, -.25, .1),
+            Segment(-ROBOT_2_L1_FRONT, ROBOT_HEIGHT,
+                    -ROBOT_2_L1_FRONT - ROBOT_WIDTH,
+                    ROBOT_HEIGHT),
+            Segment(0, 0, 0, L1_FRONT_HEIGHT),
+            Segment(0, L1_FRONT_HEIGHT, L1_FRONT_2_L1_BACK,
+                    L1_BACK_HEIGHT),
+            Segment(L2_UL_X, L2_UL_Y, L2_UR_X,
+                    L2_UR_Y),
+            Segment(L2_LL_X, L2_LL_Y, L2_LR_X,
+                    L2_LR_Y),
+            Segment(L3_UL_X, L3_UL_Y, L3_UR_X,
+                    L3_UR_Y),
+            Segment(L3_LL_X, L3_LL_Y, L3_LR_X,
+                    L3_LR_Y),
+            Segment(L4_UL_X, L4_UL_Y, L4_LL_X,
+                    L4_LL_Y),
+            Segment(BRANCH_UL_X, BRANCH_UL_Y, BRANCH_LL_X,
+                    BRANCH_LL_Y),
+            Segment(BRANCH_UL_X, BRANCH_UL_Y, L4_LL_X,
+                    L4_LL_Y),
         };
+        this->x = 0;
+        this->y = 0;
+        this->theta = 0;
+        return;
       }
-    } else {
-      if (withAlgae && withCoral) {
-      } else if (withAlgae) {
-      } else if (withCoral) {
-      } else {
+      case ObjectType::ARM: {
         this->segments = std::vector<Segment>{
             Segment(-.2, .05, .2, .05),
             Segment(.2, .05, .2, -.05),
             Segment(.2, -.05, -.2, -.05),
             Segment(-.2, -.05, -.2, .05),
         };
+        break;
+      }
+      case ObjectType::ARM_EXP: {
+        this->segments = std::vector<Segment>{
+            Segment(-.25, .1, .25, .1),
+            Segment(.25, .1, .25, -.1),
+            Segment(.25, -.1, -.25, -.1),
+            Segment(-.25, -.1, -.25, .1),
+        };
+        break;
+      }
+      default: {
+        this->segments = std::vector<Segment>();
+        break;
       }
     }
     this->x = 0;
     this->y = 0;
     this->theta = 0;
+    this->armTransform(t, r);
   }
-  Object(std::vector<Segment> segments) {
-    this->segments = segments;
-    this->x = 0;
-    this->y = 0;
-    this->theta = 0;
-  }
-  Object(std::vector<Segment> segments, double x, double y, double theta) {
+  Object(std::vector<Segment> segments, double x = 0, double y = 0, double theta = 0) {
     this->segments = segments;
     this->x = 0;
     this->y = 0;
@@ -127,7 +133,6 @@ class Object {
     this->y = obj.y;
     this->theta = obj.theta;
   }
-
   bool intersect(Object segs) {
     for (Segment s1 : this->segments) {
       for (Segment s2 : segs.segments) {

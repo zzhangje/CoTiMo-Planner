@@ -1,6 +1,7 @@
 #include <grpcpp/grpcpp.h>
-#include "proto/ArmTrajectoryService.grpc.pb.h"
+
 #include "log.hpp"
+#include "proto/ArmTrajectoryService.grpc.pb.h"
 
 using namespace com::nextinnovation::armtrajectoryservice;
 using grpc::Server;
@@ -10,13 +11,13 @@ using grpc::Status;
 
 class Service final : public ArmTrajectoryService::Service {
   Status generate(ServerContext* context, const ArmTrajectoryParameter* request,
-                 Response* response) override {
+                  Response* response) override {
     auto* trajectory = response->mutable_trajectory();
     *trajectory->mutable_parameter() = *request;
-    
+
     const auto& start = request->start();
     const auto& end = request->end();
-    
+
     for (int i = 0; i < 5; i++) {
       double t = i / 4.0;
       auto* state = trajectory->add_states();
@@ -24,7 +25,7 @@ class Service final : public ArmTrajectoryService::Service {
       auto* pos = state->mutable_position();
       pos->set_shoulderheightmeter(start.shoulderheightmeter() + (end.shoulderheightmeter() - start.shoulderheightmeter()) * t);
       pos->set_elbowpositiondegree(start.elbowpositiondegree() + (end.elbowpositiondegree() - start.elbowpositiondegree()) * t);
-      
+
       auto* current = state->mutable_current();
       current->set_shouldercurrentamp(1.0);
       current->set_elbowcurrentamp(0.8);
@@ -55,6 +56,6 @@ int main() {
   builder.RegisterService(&service);
   log_info("Server is running on 0.0.0.0:50051");
   builder.BuildAndStart()->Wait();
-  
+
   return 0;
 }

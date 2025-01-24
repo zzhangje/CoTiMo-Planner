@@ -4,6 +4,8 @@
 #include <cmath>
 #include <string>
 
+#define OPENCV_MAIN_WINDOW_NAME "Cyber Planner 2025"
+
 namespace config {
 
 constexpr double toRadians(double degree) {
@@ -64,10 +66,15 @@ constexpr double ARM_MAX_RPS = 2;
 constexpr double ARM_MAX_RPSS = 0.01;
 constexpr double ARM_REDUCTION = 1.0;
 
-constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION;
-constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION;
-constexpr double ELEVATOR_VMAX = ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
-constexpr double ELEVATOR_AMAX = ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
+// constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION;
+// constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION;
+// constexpr double ELEVATOR_VMAX = ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
+// constexpr double ELEVATOR_AMAX = ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
+
+const double ARM_VMAX = 0x3f3f3f3f;
+const double ARM_AMAX = 0x3f3f3f3f;
+const double ELEVATOR_VMAX = 0x3f3f3f3f;
+const double ELEVATOR_AMAX = 0x3f3f3f3f;
 
 constexpr double ELEVATOR_GRID_SIZE = 0.05;
 constexpr double ARM_GRID_SIZE = 5;

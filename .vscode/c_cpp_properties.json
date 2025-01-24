@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/include/libs",
-                "${workspaceFolder}/include/sys",
+                "${workspaceFolder}/include/utils",
                 "${workspaceFolder}/build",
                 "/usr/include",
                 "/usr/local/include"

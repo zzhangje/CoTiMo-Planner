@@ -59,28 +59,31 @@ std::vector<Eigen::Vector2d> getTRs(const std::vector<Eigen::Vector2i>& idxs) {
   return trs;
 }
 
-void getGridMap(Object& env, Object& arm, std::vector<std::vector<bool>>& map) {
+void getGridMap(ObjectType type, std::vector<std::vector<bool>>& map) {
+  assert(type != ObjectType::ENV);
+  auto env = Object(ObjectType::ENV);
   map = std::vector<std::vector<bool>>(
       ELEVATOR_GRID_NUMS,
       std::vector<bool>(ARM_GRID_NUMS, true));
   for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
     for (int rr = 0; rr < ARM_GRID_NUMS; ++rr) {
-      Object arm_copy = Object(arm);
       Eigen::Vector2d tr = getTR(tt, rr);
-      arm_copy.armTransform(tr[0], tr[1]);
+      Object arm = Object(type, tr.x(), tr.y());
       // true if no intersection
-      map[tt][rr] = !arm_copy.intersect(env);
+      map[tt][rr] = !env.intersect(arm);
     }
   }
   log_info("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
   return;
 }
 
-void getGridMap(Object& env, Object& arm,
+void getGridMap(ObjectType type,
                 std::vector<std::vector<double>>& map) {
+  assert(type != ObjectType::ENV);
   map = std::vector<std::vector<double>>(
       ELEVATOR_GRID_NUMS,
       std::vector<double>(ARM_GRID_NUMS, true));
+  auto env = Object(ObjectType::ENV);
   const double obstacle = OBSTACLE_OFFSET;
   const double reduce = OBSTACLE_FIELD_REDUCTION;
   // bound of the map
@@ -94,10 +97,9 @@ void getGridMap(Object& env, Object& arm,
   }
   for (int tt = 1; tt < ELEVATOR_GRID_NUMS - 1; ++tt) {
     for (int rr = 1; rr < ARM_GRID_NUMS - 1; ++rr) {
-      Object arm_copy = Object(arm);
       Eigen::Vector2d tr = getTR(tt, rr);
-      arm_copy.armTransform(tr[0], tr[1]);
-      if (arm_copy.intersect(env)) {
+      Object arm = Object(type, tr.x(), tr.y());
+      if (arm.intersect(env)) {
         map[tt][rr] = obstacle;
       } else {
         map[tt][rr] = std::max(map[tt - 1][rr - 1],
