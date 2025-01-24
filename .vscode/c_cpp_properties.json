@@ -6,7 +6,7 @@
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/include/libs",
-                "${workspaceFolder}/include/sys",
+                "${workspaceFolder}/include/utils",
                 "${workspaceFolder}/build-windows/proto",
                 "${workspaceFolder}/build-windows/vcpkg_installed/x64-windows/include"
             ],
