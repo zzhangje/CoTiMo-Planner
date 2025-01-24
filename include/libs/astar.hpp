@@ -13,7 +13,7 @@ bool astar(const std::vector<std::vector<bool>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,
            std::vector<Eigen::Vector2i>& path,
            std::vector<Eigen::Vector2i>& visited) {
-  log_info("A* algorithm started.");
+  log_debug("A* algorithm started.");
   auto start_time = std::chrono::high_resolution_clock::now();
 
   int n = grid_map.size(), m = grid_map[0].size();
@@ -83,18 +83,18 @@ bool astar(const std::vector<std::vector<bool>>& grid_map,
     path.push_back(start);
     std::reverse(path.begin(), path.end());
     return true;
-    log_info("A* algorithm succeeded, time elapsed: %d.%dms",
-             std::chrono::duration_cast<std::chrono::milliseconds>(
-                 std::chrono::high_resolution_clock::now() - start_time)
-                 .count(),
-             std::chrono::duration_cast<std::chrono::microseconds>(
-                 std::chrono::high_resolution_clock::now() -
-                 start_time)
-                     .count() %
-                 1000);
+    log_debug("A* algorithm succeeded, time elapsed: %d.%dms",
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::high_resolution_clock::now() - start_time)
+                  .count(),
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::high_resolution_clock::now() -
+                  start_time)
+                      .count() %
+                  1000);
     return true;
   }
-  log_error("A* algorithm failed, time elapsed: %d.%dms",
+  log_debug("A* algorithm failed, time elapsed: %d.%dms",
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::high_resolution_clock::now() - start_time)
                 .count(),
@@ -110,7 +110,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,
            std::vector<Eigen::Vector2i>& path,
            std::vector<Eigen::Vector2i>& visited) {
-  log_info("A* algorithm started.");
+  log_debug("A* algorithm started.");
   auto start_time = std::chrono::high_resolution_clock::now();
 
   int n = grid_map.size(), m = grid_map[0].size();
@@ -178,7 +178,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
     }
   }
   if (path.empty()) {
-    log_error("A* algorithm failed, time elapsed:%d.%3dms",
+    log_debug("A* algorithm failed, time elapsed:%d.%3dms",
               std::chrono::duration_cast<std::chrono::milliseconds>(
                   std::chrono::high_resolution_clock::now() - start_time)
                   .count(),
@@ -189,15 +189,15 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
                   1000);
     return false;
   } else {
-    log_info("A* algorithm succeeded, time elapsed: %d.%3dms",
-             std::chrono::duration_cast<std::chrono::milliseconds>(
-                 std::chrono::high_resolution_clock::now() - start_time)
-                 .count(),
-             std::chrono::duration_cast<std::chrono::microseconds>(
-                 std::chrono::high_resolution_clock::now() -
-                 start_time)
-                     .count() %
-                 1000);
+    log_debug("A* algorithm succeeded, time elapsed: %d.%3dms",
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::high_resolution_clock::now() - start_time)
+                  .count(),
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::high_resolution_clock::now() -
+                  start_time)
+                      .count() %
+                  1000);
     return true;
   }
 }

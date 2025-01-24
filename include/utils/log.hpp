@@ -5,13 +5,15 @@
  * under the terms of the MIT license. See `log.c` for details.
  */
 
-#ifndef LOG_H
-#define LOG_H
+#ifndef LOG_HPP
+#define LOG_HPP
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
+
+#include "config.h"
 
 #define LOG_VERSION "0.1.0"
 #define MAX_CALLBACKS 32
@@ -70,14 +72,26 @@ static void stdout_callback(log_Event *ev) {
   char buf[16];
   buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
 #ifdef LOG_USE_COLOR
-  fprintf(
-      (FILE *)ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
-      buf, level_colors[ev->level], level_strings[ev->level],
-      ev->file, ev->line);
+  if (config::dynamic::IS_DEBUG) {
+    fprintf(
+        (FILE *)ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
+        buf, level_colors[ev->level], level_strings[ev->level],
+        ev->file, ev->line);
+  } else {
+    fprintf(
+        (FILE *)ev->udata, "%s %s%-5s\x1b[0m \x1b[90m",
+        buf, level_colors[ev->level], level_strings[ev->level]);
+  }
 #else
-  fprintf(
-      (FILE *)ev->udata, "%s %-5s %s:%d: ",
-      buf, level_strings[ev->level], ev->file, ev->line);
+  if (config::dynamic::IS_DEBUG) {
+    fprintf(
+        (FILE *)ev->udata, "%s %-5s %s:%d: ",
+        buf, level_strings[ev->level], ev->file, ev->line);
+  } else {
+    fprintf(
+        (FILE *)ev->udata, "%s %-5s ",
+        buf, level_strings[ev->level]);
+  }
 #endif
   vfprintf((FILE *)ev->udata, ev->fmt, ev->ap);
   fprintf((FILE *)ev->udata, "\n");
@@ -151,6 +165,10 @@ static void init_event(log_Event *ev, void *udata) {
 }
 
 void log_log(int level, const char *file, int line, const char *fmt, ...) {
+  if (level == LOG_DEBUG && !config::dynamic::IS_DEBUG) {
+    return;
+  }
+
   log_Event ev;
   ev.fmt = fmt;
   ev.file = file;

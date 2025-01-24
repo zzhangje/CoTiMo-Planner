@@ -18,9 +18,7 @@
 #define GAMMA .5
 #define RHO 1e1
 
-using com::nextinnovation::armtrajectoryservice::ArmCurrentState;
-using com::nextinnovation::armtrajectoryservice::ArmPositionState;
-using com::nextinnovation::armtrajectoryservice::ArmTrajectoryState;
+using namespace com::nextinnovation::armtrajectoryservice;
 using namespace config::alphabot;
 
 Eigen::VectorXd max(const Eigen::VectorXd& v, const double num) {
@@ -138,7 +136,7 @@ class Topp {
     auto lastMicros = std::chrono::duration_cast<std::chrono::microseconds>(
                           now.time_since_epoch())
                           .count();
-    auto beginTime = lastMicros;
+    auto beginTime = lastMillis;
 
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
@@ -179,7 +177,11 @@ class Topp {
       lastMicros = micros;
     }
 
-    log_info("TOPP problem solved, total duration: %3d.%3dms, iterations: %d, loss: %f", (lastMillis - beginTime) % 1000, (lastMicros - beginTime) % 1000, maxIter, cost);
+    now = std::chrono::steady_clock::now();
+    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      now.time_since_epoch())
+                      .count();
+    log_info("TOPP problem solved, total duration: %3d.%3dms, iterations: %d, loss: %f", (millis - beginTime) / 1000, (millis - beginTime) % 1000, maxIter, cost);
     return;
   }
 
@@ -187,75 +189,66 @@ class Topp {
   double getLoss() {
     return loss(this, x, g);
   }
-  void getStates(std::vector<ArmTrajectoryState>& states) {
+  void getTrajectory(ArmTrajectory* trajectory) {
     Eigen::VectorXd ak = x.segment(getA(0), lenA());
     Eigen::VectorXd bk = x.segment(getB(0), lenB());
     Eigen::VectorXd ck = x.segment(getC(0), lenC());
     Eigen::VectorXd dk = x.segment(getD(0), lenD());
+    ArmTrajectoryState* state;
+    double t = 0;
 
-    states.clear();
-    ArmTrajectoryState state;
-    ArmPositionState position;
-    ArmCurrentState current;
+    log_debug("qt1: %f", qt1(0));
+    log_debug("qt2: %f", qt2(0));
+    log_debug("ak: %f", ak(0));
+    log_debug("bk: %f", bk(0));
+    log_debug("ck: %f", ck(0));
 
-    position.set_shoulderheightmeter(points[0].x());
-    position.set_elbowpositiondegree(points[0].y());
-    // TODO: calculate current
-    current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(0) * ck(0) + ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)));  // voltage
-    current.set_elbowcurrentamp(ARM_Kv * qr1(0) * ck(0) + ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0)));               // voltage
-    state.set_timestamp(0);
-    state.set_allocated_position(&position);
-    state.set_allocated_current(&current);
-    states.push_back(state);
-
-    for (int i = 1; i < n; ++i) {
-      position.set_shoulderheightmeter(points[i].x());
-      position.set_elbowpositiondegree(points[i].y());
-      current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
-      current.set_elbowcurrentamp(ARM_Kv * qr1(i) * ck(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
-      state.set_timestamp(arc(i - 1) * 2 / (ck(i) + ck(i - 1)));
-      state.set_allocated_position(&position);
-      state.set_allocated_current(&current);
-      states.push_back(state);
+    for (int i = 0; i < n; ++i) {
+      state = trajectory->add_states();
+      state->set_timestamp(t);
+      state->mutable_position()->set_shoulderheightmeter(points[i](0));
+      state->mutable_position()->set_elbowpositiondegree(points[i](1));
+      state->mutable_voltage()->set_shouldervoltagevolt(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
+      state->mutable_voltage()->set_elbowvoltagevolt(ARM_Kv * qr1(i) * ck(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
+      state->mutable_velocity()->set_shouldervelocitymeterpersecond(qt1(i) * ck(i));
+      state->mutable_velocity()->set_elbowvelocitydegreepersecond(qr1(i) * ck(i));
+      t += arc(i) * 2 / (ck(i) + ck(i + 1));
     }
 
-    position.set_shoulderheightmeter(points[n].x());
-    position.set_elbowpositiondegree(points[n].y());
-    current.set_shouldercurrentamp(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n));
-    current.set_elbowcurrentamp(ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n));
-    state.set_timestamp(arc(n - 1) * 2 / (ck(n) + ck(n - 1)));
-    state.set_allocated_position(&position);
-    state.set_allocated_current(&current);
-    states.push_back(state);
+    state = trajectory->add_states();
+    state->set_timestamp(t);
+    state->mutable_position()->set_shoulderheightmeter(points[n](0));
+    state->mutable_position()->set_elbowpositiondegree(points[n](1));
+    state->mutable_voltage()->set_shouldervoltagevolt(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n));
+    state->mutable_voltage()->set_elbowvoltagevolt(ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n));
+    state->mutable_velocity()->set_shouldervelocitymeterpersecond(qt1(n) * ck(n));
+    state->mutable_velocity()->set_elbowvelocitydegreepersecond(qr1(n) * ck(n));
   }
 
-  void getStates(std::vector<double>& timestamp, std::vector<Eigen::Vector2d>& position, std::vector<Eigen::Vector2d>& voltage, std::vector<Eigen::Vector2d>& velocity, std::vector<Eigen::Vector2d>& acceleration) {
+  void getTrajectory(std::vector<double>& timestamp, std::vector<Eigen::Vector2d>& position, std::vector<Eigen::Vector2d>& voltage, std::vector<Eigen::Vector2d>& velocity) {
     Eigen::VectorXd ak = x.segment(getA(0), lenA());
     Eigen::VectorXd bk = x.segment(getB(0), lenB());
     Eigen::VectorXd ck = x.segment(getC(0), lenC());
     Eigen::VectorXd dk = x.segment(getD(0), lenD());
 
-    timestamp.clear(), position.clear(), voltage.clear(), velocity.clear(), acceleration.clear();
+    timestamp.clear(), position.clear(), voltage.clear(), velocity.clear();
 
     timestamp.push_back(0);
     position.push_back(points[0]);
     voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(0) * ck(0) + ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)), ARM_Kv * qr1(0) * ck(0) + ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0))));
     velocity.push_back(Eigen::Vector2d(qt1(0) * ck(0), qr1(0) * ck(0)));
-    acceleration.push_back(Eigen::Vector2d(qt2(0) * ak(0) + qt1(0) * bk(0), qr2(0) * ak(0) + qr1(0) * bk(0)));
 
     for (int i = 1; i < n; ++i) {
       timestamp.push_back(arc(i - 1) * 2 / (ck(i) + ck(i - 1)));
       position.push_back(points[i]);
       voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)), ARM_Kv * qr1(i) * ck(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i))));
       velocity.push_back(Eigen::Vector2d(qt1(i) * ck(i), qr1(i) * ck(i)));
-      acceleration.push_back(Eigen::Vector2d(qt2(i) * ak(i) + qt1(i) * bk(i), qr2(i) * ak(i) + qr1(i) * bk(i)));
     }
 
     timestamp.push_back(arc(n - 1) * 2 / (ck(n) + ck(n - 1)));
     position.push_back(points[n]);
     voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n), ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n)));
     velocity.push_back(Eigen::Vector2d(qt1(n) * ck(n), qr1(n) * ck(n)));
-    acceleration.push_back(Eigen::Vector2d(qt2(n) * ak(n - 1) + qt1(n) * bk(n), qr2(n) * ak(n - 1) + qr1(n) * bk(n)));
     log_info("TOPP parameters generated.");
   }
 
@@ -480,7 +473,6 @@ class Topp {
      * +Kv * q'_r(s_k) * c_k + Ka * q''_r(s_k) * a_k + Ka * q'_r(s_k) * b_k <= V_max
      * -Kv * q'_r(s_k) * c_k - Ka * q''_r(s_k) * a_k - Ka * q'_r(s_k) * b_k <= V_max
      */
-    std::cout << n_ineq_cnt << std::endl;
     for (int i = 0; i < n; ++i) {
       P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_Kv * qt1(i);
       P.insert(n_ineq_cnt, getA(i)) = ELEVATOR_Ka * qt2(i);
@@ -506,7 +498,6 @@ class Topp {
       q.insert(n_ineq_cnt) = ARM_MAX_VOLTAGE;
       ++n_ineq_cnt;
     }
-    std::cout << n_ineq_cnt << std::endl;
 
     log_debug("Setting up TOPP problem[7/] linear inequality constraints initialized, %d/%d.", n_ineq_cnt, n_ineq);
 
@@ -539,8 +530,6 @@ class Topp {
     eta = Eigen::VectorXd::Zero(n_ineq);
     rho = RHO;
     log_debug("Setting up TOPP problem[9/] dual variables initialized.");
-
-    log_info("TOPP problem set up.");
   }
 
   static double loss(void* instance, const Eigen::VectorXd& optX,

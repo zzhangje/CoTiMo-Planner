@@ -24,7 +24,7 @@ Eigen::Vector2i getGridIdx(const double t, const double r) {
                                ELEVATOR_GRID_SIZE),
                          floor((clamp(r, ARM_MIN_THETA_ROTATION,
                                       ARM_MAX_THETA_ROTATION) -
-                                ARM_MAX_THETA_ROTATION) /
+                                ARM_MIN_THETA_ROTATION) /
                                ARM_GRID_SIZE));
 }
 
@@ -73,7 +73,7 @@ void getGridMap(ObjectType type, std::vector<std::vector<bool>>& map) {
       map[tt][rr] = !env.intersect(arm);
     }
   }
-  log_info("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
+  log_debug("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
   return;
 }
 
@@ -124,7 +124,7 @@ void getGridMap(ObjectType type,
       }
     }
   }
-  log_info("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
+  log_debug("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
   return;
 }
 

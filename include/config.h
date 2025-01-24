@@ -32,6 +32,8 @@ namespace dynamic {
 constexpr double OBSTACLE_OFFSET = 100.0;
 constexpr double OBSTACLE_FIELD_REDUCTION = 0.6;
 constexpr double ASTAR_HEURISTIC_COEFFICIENT = 1.0;
+const std::string GRPC_PORT = "58214";
+const bool IS_DEBUG = false;
 }  // namespace dynamic
 
 namespace alphabot {
