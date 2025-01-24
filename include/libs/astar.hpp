@@ -203,15 +203,19 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
 }
 
 void samplePath(const std::vector<Eigen::Vector2i>& path,
-                std::vector<Eigen::Vector2i>& sampled_path, int step = 5) {
+                std::vector<Eigen::Vector2i>& sampled_path, int step = 3) {
   sampled_path.clear();
   int n = path.size();
-  int mid = (n + 1) / 2;
-  sampled_path.push_back(path[0]);
-  for (int i = mid % step; i <= mid; i += step) {
-    sampled_path.push_back(path[i]);
+  int remainder = n % step;
+  if (remainder == 1) {
+    for (int i = 0; i < n; i += step) {
+      sampled_path.push_back(path[i]);
+    }
+    return;
   }
-  for (int i = mid + step; i < n; i += step) {
+  if (remainder == 0) remainder = step;
+  sampled_path.push_back(path[0]);
+  for (int i = remainder / 2; i < n - 1; i += step) {
     sampled_path.push_back(path[i]);
   }
   sampled_path.push_back(path[n - 1]);

@@ -59,7 +59,8 @@ class Service final : public ArmTrajectoryService::Service {
       }
     }
     log_info("Found a path with %d points.", path.size());
-    astar::samplePath(path, sampledPath, 3);
+    // astar::samplePath(path, sampledPath, 1);
+    sampledPath = path;
 
     ArmTrajectory* trajectory = response->mutable_trajectory();
     Topp topp(getTRs(sampledPath));

@@ -1,3 +1,4 @@
+#include <eigen3/Eigen/Eigen>
 #include <iomanip>
 #include <iostream>
 
@@ -5,9 +6,8 @@
 #include "config.h"
 #include "lbfgs.hpp"
 #include "map.hpp"
-#include "matplotlibcpp.h"
+#include "spline.hpp"
 
-namespace plt = matplotlibcpp;
 using namespace config::alphabot;
 
 // int main() {
@@ -38,58 +38,14 @@ using namespace config::alphabot;
 //   plt::show();
 //   return 0;
 // }
-class Example {
- public:
-  void run() {
-    double cost;
-    lbfgs::lbfgs_parameter_t params;
-    params.g_epsilon = 1.0e-8;
-    params.past = 3;
-    params.delta = 1.0e-8;
-    Eigen::VectorXd x = Eigen::VectorXd::Random(4);
-    std::cout << x.transpose() << std::endl;
-    for (int i = 0; i < 20; ++i) {
-      std::cout << lbfgs::lbfgs_optimize(x, cost, loss, NULL, monitorProgress, this, params) << std::endl;
-    }
-    std::cout << x.transpose() << std::endl;
-    std::cout << "Cost: " << cost << std::endl;
-  }
-  static double loss(void* instance, const Eigen::VectorXd& x,
-                     Eigen::VectorXd& g) {
-    Eigen::MatrixXd G, H;
-    Eigen::VectorXd f, c;
-    G = Eigen::MatrixXd::Zero(4, 4);
-    H = Eigen::MatrixXd::Zero(4, 4);
-    f = Eigen::VectorXd::Zero(4);
-    c = Eigen::VectorXd::Zero(4);
-    G(0, 0) = 1;
-    H(1, 1) = 1;
-    f(2) = 1;
-    c(3) = 1;
-    g = 2 * ((x.transpose() * G).dot(x) + f.dot(x)) * (G * x - f) + 2 * ((x.transpose() * H * x) + c.dot(x)) * (H * x - c);
-    // std::cout << "Gradient: " << g.transpose() << std::endl;
-    return (x.transpose() * G * x - f.transpose() * x).squaredNorm() + (x.transpose() * H * x - c.transpose() * x).squaredNorm();
-  }
-  static int monitorProgress(void* instance,
-                             const Eigen::VectorXd& x,
-                             const Eigen::VectorXd& g,
-                             const double fx,
-                             const double step,
-                             const int k,
-                             const int ls) {
-    std::cout << std::setprecision(4)
-              << "================================" << std::endl
-              << "Iteration: " << k << std::endl
-              << "Function Value: " << fx << std::endl
-              << "Gradient Inf Norm: " << g.cwiseAbs().maxCoeff() << std::endl
-              << "Variables: " << std::endl
-              << x.transpose() << std::endl;
-    return 0;
-  }
-};
 
 int main() {
-  Example example;
-  example.run();
+  Eigen::VectorXd x = Eigen::VectorXd::LinSpaced(10, 0, 9);
+  Eigen::VectorXd a, b, c, d;
+  spline::cubic(x, a, b, c, d);
+  std::cout << a.transpose() << std::endl;
+  std::cout << b.transpose() << std::endl;
+  std::cout << c.transpose() << std::endl;
+  std::cout << d.transpose() << std::endl;
   return 0;
 }

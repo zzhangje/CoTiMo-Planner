@@ -59,3 +59,8 @@ target_link_libraries(Client
     trajectory_native_proto
     Eigen3::Eigen
 )
+
+add_executable(test
+src/test.cpp
+${HEADER_FILES}
+)
