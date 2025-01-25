@@ -7,7 +7,6 @@
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/include/libs",
                 "${workspaceFolder}/include/utils",
-                "${workspaceFolder}/build/proto",
                 "${workspaceFolder}/build-windows/proto",
                 "${workspaceFolder}/build-windows/vcpkg_installed/x64-windows/include"
             ],
@@ -30,7 +29,7 @@
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/include/libs",
                 "${workspaceFolder}/include/utils",
-                "${workspaceFolder}/build",
+                "${workspaceFolder}/build/proto",
                 "/usr/include",
                 "/usr/local/include"
             ],

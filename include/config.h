@@ -52,8 +52,8 @@ constexpr double ELEVATOR_COS_ANGLE = constexprCos(toRadians(ELEVATOR_2_GROUND_A
 constexpr double ELEVATOR_MAX_VOLTAGE = 12;
 constexpr double ELEVATOR_Kv = 1;
 constexpr double ELEVATOR_Ka = 1;
-constexpr double ELEVATOR_MIN_POSITION = 0;
-constexpr double ELEVATOR_MAX_POSITION = 2.0;
+constexpr double ELEVATOR_MIN_POSITION_METER = 0;
+constexpr double ELEVATOR_MAX_POSITION_METER = 2.0;
 constexpr double ELEVATOR_MAX_RPS = 2;
 constexpr double ELEVATOR_MAX_RPSS = 0.01;
 constexpr double ELEVATOR_REDUCTION = 1.0;
@@ -62,8 +62,8 @@ constexpr double ELEVATOR_ROTATION_2_POSITION = 1;
 constexpr double ARM_MAX_VOLTAGE = 12;
 constexpr double ARM_Kv = 1;
 constexpr double ARM_Ka = 1;
-constexpr double ARM_MIN_THETA_ROTATION = 0;
-constexpr double ARM_MAX_THETA_ROTATION = 350;
+constexpr double ARM_MIN_THETA_DEGREE = 0;
+constexpr double ARM_MAX_THETA_DEGREE = 350;
 constexpr double ARM_MAX_RPS = 2;
 constexpr double ARM_MAX_RPSS = 0.01;
 constexpr double ARM_REDUCTION = 1.0;
@@ -80,8 +80,8 @@ const double ELEVATOR_AMAX = 0x3f3f3f3f;
 
 constexpr double ELEVATOR_GRID_SIZE = 0.05;
 constexpr double ARM_GRID_SIZE = 5;
-constexpr int ELEVATOR_GRID_NUMS = constexprFloor((ELEVATOR_MAX_POSITION - ELEVATOR_MIN_POSITION) / ELEVATOR_GRID_SIZE) + 1;
-constexpr int ARM_GRID_NUMS = constexprFloor((ARM_MAX_THETA_ROTATION - ARM_MIN_THETA_ROTATION) / ARM_GRID_SIZE) + 1;
+constexpr int ELEVATOR_GRID_NUMS = constexprFloor((ELEVATOR_MAX_POSITION_METER - ELEVATOR_MIN_POSITION_METER) / ELEVATOR_GRID_SIZE) + 1;
+constexpr int ARM_GRID_NUMS = constexprFloor((ARM_MAX_THETA_DEGREE - ARM_MIN_THETA_DEGREE) / ARM_GRID_SIZE) + 1;
 };  // namespace alphabot
 
 namespace env {
