@@ -7,4 +7,4 @@ cd build
 cmake ..
 make -j$(nproc)
 cd ..
-./build/Cyber_Planner
+./build/server & ./build/plot

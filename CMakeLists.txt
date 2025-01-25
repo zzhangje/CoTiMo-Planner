@@ -36,14 +36,14 @@ file(GLOB_RECURSE HEADER_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
 
-add_executable(Cyber_Planner
+add_executable(server
     src/server.cpp
     ${HEADER_FILES}
 )
 
-target_include_directories(Cyber_Planner PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
+target_include_directories(server PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
 
-target_link_libraries(Cyber_Planner
+target_link_libraries(server
     trajectory_native_proto
     Eigen3::Eigen
 )
@@ -60,7 +60,7 @@ target_link_libraries(Client
     Eigen3::Eigen
 )
 
-add_executable(test
-src/test.cpp
+add_executable(plot
+src/plot.cpp
 ${HEADER_FILES}
 )
