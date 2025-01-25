@@ -33,51 +33,53 @@ constexpr double OBSTACLE_OFFSET = 100.0;
 constexpr double OBSTACLE_FIELD_REDUCTION = 0.6;
 constexpr double ASTAR_HEURISTIC_COEFFICIENT = 1.0;
 const std::string GRPC_PORT = "58214";
-const bool IS_DEBUG = false;
+const bool IS_DEBUG = true;
 }  // namespace dynamic
 
 namespace alphabot {
-const std::string VERSION = "8214.0.0";
+const std::string VERSION = "8214.0.0";  // for cache version control
 
-constexpr double ROBOT_WIDTH = 0.7;
-constexpr double ROBOT_HEIGHT = 0.2;
-constexpr double ROBOT_2_L1_FRONT = 0.05;
+// the prohitbit area of the drivetrain
+constexpr double ROBOT_WIDTH = 0.7;        // the width of the prohitbit area
+constexpr double ROBOT_HEIGHT = 0.2;       // the height of the prohitbit area to the ground
+constexpr double ROBOT_2_L1_FRONT = 0.05;  // the distance from the prohitbit area to the front of the reef
 
-constexpr double ELEVATOR_2_L1_FRONT = 0.4;
-constexpr double ELEVATOR_2_GROUND = 0.2;
-constexpr double ELEVATOR_2_GROUND_ANGLE = 80.0;
+// the properties of the elevator
+constexpr double ELEVATOR_2_L1_FRONT = 0.4;       // the distance from the elevator to the front of the reef
+constexpr double ELEVATOR_2_GROUND = 0.2;         // the distance from the elevator to the ground
+constexpr double ELEVATOR_2_GROUND_ANGLE = 80.0;  // the angle from the elevator to the ground
 constexpr double ELEVATOR_SIN_ANGLE = constexprSin(toRadians(ELEVATOR_2_GROUND_ANGLE));
 constexpr double ELEVATOR_COS_ANGLE = constexprCos(toRadians(ELEVATOR_2_GROUND_ANGLE));
-
-constexpr double ELEVATOR_MAX_VOLTAGE = 12;
-constexpr double ELEVATOR_Kv = 1;
-constexpr double ELEVATOR_Ka = 1;
 constexpr double ELEVATOR_MIN_POSITION_METER = 0;
 constexpr double ELEVATOR_MAX_POSITION_METER = 2.0;
+constexpr double ARM_MIN_THETA_DEGREE = 0;
+constexpr double ARM_MAX_THETA_DEGREE = 350;
+
+// the properties of the elevator motor
+constexpr double ELEVATOR_Kv = 1;
+constexpr double ELEVATOR_Ka = 1;
 constexpr double ELEVATOR_MAX_RPS = 2;
 constexpr double ELEVATOR_MAX_RPSS = 0.01;
 constexpr double ELEVATOR_REDUCTION = 1.0;
-constexpr double ELEVATOR_ROTATION_2_POSITION = 1;
+constexpr double ELEVATOR_ROUNDS_2_POSITION = 1.0;
 
-constexpr double ARM_MAX_VOLTAGE = 12;
+// the properties of the arm motor
 constexpr double ARM_Kv = 1;
 constexpr double ARM_Ka = 1;
-constexpr double ARM_MIN_THETA_DEGREE = 0;
-constexpr double ARM_MAX_THETA_DEGREE = 350;
 constexpr double ARM_MAX_RPS = 2;
 constexpr double ARM_MAX_RPSS = 0.01;
 constexpr double ARM_REDUCTION = 1.0;
+constexpr double ARM_ROUNDS_2_DEGREE = 360.0;
 
-// constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION;
-// constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION;
-// constexpr double ELEVATOR_VMAX = ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
-// constexpr double ELEVATOR_AMAX = ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROTATION_2_POSITION;
+// the limit of the motor
+constexpr double ELEVATOR_MAX_VOLTAGE = 12;
+constexpr double ELEVATOR_VMAX = ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
+constexpr double ELEVATOR_AMAX = ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
+constexpr double ARM_MAX_VOLTAGE = 12;
+constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
+constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
 
-const double ARM_VMAX = 0x3f3f3f3f;
-const double ARM_AMAX = 0x3f3f3f3f;
-const double ELEVATOR_VMAX = 0x3f3f3f3f;
-const double ELEVATOR_AMAX = 0x3f3f3f3f;
-
+// the properties of the grid map
 constexpr double ELEVATOR_GRID_SIZE = 0.05;
 constexpr double ARM_GRID_SIZE = 5;
 constexpr int ELEVATOR_GRID_NUMS = constexprFloor((ELEVATOR_MAX_POSITION_METER - ELEVATOR_MIN_POSITION_METER) / ELEVATOR_GRID_SIZE) + 1;
