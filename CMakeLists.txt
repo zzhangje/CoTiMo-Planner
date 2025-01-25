@@ -64,3 +64,8 @@ add_executable(plot
 src/plot.cpp
 ${HEADER_FILES}
 )
+
+target_link_libraries(test
+    trajectory_native_proto
+    Eigen3::Eigen
+)

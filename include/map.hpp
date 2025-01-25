@@ -1,8 +1,8 @@
 #ifndef MAP_HPP
 #define MAP_HPP
 
-#include <cmath>
-#include <eigen3/Eigen/Eigen>
+#include <vector>
+#include <Eigen/Eigen>
 
 #include "Object.hpp"
 #include "config.h"

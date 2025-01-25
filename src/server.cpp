@@ -1,5 +1,5 @@
-#include <grpcpp/grpcpp.h>
-
+﻿#include <grpcpp/grpcpp.h>
+#include <atomic>
 #include <eigen3/Eigen/Eigen>
 
 #include "Topp.hpp"
@@ -88,6 +88,8 @@ int main() {
 
   Service service;
   ServerBuilder builder;
+
+  builder.AddChannelArgument(GRPC_ARG_MAX_CONCURRENT_STREAMS, 1);
   builder.AddListeningPort("0.0.0.0:" + GRPC_PORT, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
   log_info(("Server is running on 0.0.0.0:" + GRPC_PORT).c_str());

@@ -1,9 +1,9 @@
 #ifndef SPLINE_HPP
 #define SPLINE_HPP
 
-#include <cmath>
-#include <eigen3/Eigen/Eigen>
-#include <eigen3/Eigen/Sparse>
+#include <algorithm>
+#include <Eigen/Eigen>
+#include <Eigen/Sparse>
 
 namespace spline {
 void cubic(const Eigen::VectorXd& x, Eigen::VectorXd& a, Eigen::VectorXd& b,
