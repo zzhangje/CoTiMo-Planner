@@ -1,8 +1,8 @@
 #ifndef MAP_HPP
 #define MAP_HPP
 
-#include <cmath>
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Eigen>
+#include <vector>
 
 #include "Object.hpp"
 #include "config.h"
@@ -18,13 +18,13 @@ double clamp(double x, double min, double max) {
 int clamp(int x, int min, int max) { return std::min(std::max(x, min), max); }
 
 Eigen::Vector2i getGridIdx(const double t, const double r) {
-  return Eigen::Vector2i(floor((clamp(t, ELEVATOR_MIN_POSITION,
-                                      ELEVATOR_MAX_POSITION) -
-                                ELEVATOR_MIN_POSITION) /
+  return Eigen::Vector2i(floor((clamp(t, ELEVATOR_MIN_POSITION_METER,
+                                      ELEVATOR_MAX_POSITION_METER) -
+                                ELEVATOR_MIN_POSITION_METER) /
                                ELEVATOR_GRID_SIZE),
-                         floor((clamp(r, ARM_MIN_THETA_ROTATION,
-                                      ARM_MAX_THETA_ROTATION) -
-                                ARM_MIN_THETA_ROTATION) /
+                         floor((clamp(r, ARM_MIN_THETA_DEGREE,
+                                      ARM_MAX_THETA_DEGREE) -
+                                ARM_MIN_THETA_DEGREE) /
                                ARM_GRID_SIZE));
 }
 
@@ -43,8 +43,8 @@ std::vector<Eigen::Vector2i> getGridIdxs(
 
 Eigen::Vector2d getTR(const int t, const int r) {
   return Eigen::Vector2d(
-      t * ELEVATOR_GRID_SIZE + ELEVATOR_MIN_POSITION,
-      r * ARM_GRID_SIZE + ARM_MIN_THETA_ROTATION);
+      t * ELEVATOR_GRID_SIZE + ELEVATOR_MIN_POSITION_METER,
+      r * ARM_GRID_SIZE + ARM_MIN_THETA_DEGREE);
 }
 
 Eigen::Vector2d getTR(const Eigen::Vector2i& idx) {
