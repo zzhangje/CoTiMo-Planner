@@ -9,7 +9,7 @@ mkdir -p "$BUILD_DIR"
 mkdir -p "$VCPKG_ROOT"
 
 if [ ! -f "$VCPKG_ROOT/vcpkg" ]; then
-    echo "正在安装 vcpkg..."
+    echo "Installing vcpkg..."
     git clone https://github.com/Microsoft/vcpkg.git "$VCPKG_ROOT"
     pushd "$VCPKG_ROOT"
     ./bootstrap-vcpkg.sh
@@ -27,6 +27,6 @@ cmake -B . -S "$ROOT_DIR" \
 cmake --build . --config Release
 popd
 
-echo "构建完成！"
-echo "构建目录: $BUILD_DIR"
-echo "Vcpkg 目录: $VCPKG_ROOT" 
+echo "Build script finished."
+echo "Build directory: $BUILD_DIR"
+echo "Vcpkg directory: $VCPKG_ROOT" 

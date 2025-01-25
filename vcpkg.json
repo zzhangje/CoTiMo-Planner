@@ -1,7 +1,7 @@
 {
   "name": "cyber-planner",
   "version": "0.1.0",
-  "builtin-baseline": "4a9af5e5efcb24d0c8fcdf82dacf3b2b780b99f8",
+  "builtin-baseline": "4eeb300260f6c8773f6c0827cb9409b9181e120e",
   "dependencies": [
     {
       "name": "eigen3",

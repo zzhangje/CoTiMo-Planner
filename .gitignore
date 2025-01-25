@@ -1,5 +1,5 @@
 build/*
-logs/*
+out/*
 vcpkg
 build-windows
 build-linux

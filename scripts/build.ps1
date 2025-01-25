@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force -Path $BUILD_DIR | Out-Null
 New-Item -ItemType Directory -Force -Path $VCPKG_ROOT | Out-Null
 
 if (-not (Test-Path (Join-Path $VCPKG_ROOT "vcpkg.exe"))) {
-    Write-Host "正在安装 vcpkg..."
+    Write-Host "Installing vcpkg..."
     git clone https://github.com/Microsoft/vcpkg.git $VCPKG_ROOT
     Push-Location $VCPKG_ROOT
     .\bootstrap-vcpkg.bat
@@ -27,6 +27,6 @@ cmake -B . -S $ROOT_DIR `
 cmake --build . --config Release
 Pop-Location
 
-Write-Host "构建完成！"
-Write-Host "构建目录: $BUILD_DIR"
-Write-Host "Vcpkg 目录: $VCPKG_ROOT" 
+Write-Host "Build finished."
+Write-Host "Build directory: $BUILD_DIR"
+Write-Host "Vcpkg directory: $VCPKG_ROOT" 

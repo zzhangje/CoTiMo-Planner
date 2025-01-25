@@ -5,9 +5,10 @@ $ROOT_DIR = Split-Path -Parent $SCRIPT_DIR
 $BUILD_DIR = Join-Path $ROOT_DIR "build-windows"
 
 if (Test-Path $BUILD_DIR) {
-    Write-Host "正在清理构建目录: $BUILD_DIR"
+    Write-Host "Cleaning build directory: $BUILD_DIR"
     Remove-Item -Recurse -Force $BUILD_DIR
-    Write-Host "清理完成！"
+    Write-Host "Cleaning finished!"
 } else {
-    Write-Host "构建目录不存在，无需清理"
+    Write-Host "Build directory not found: $BUILD_DIR"
+    Write-Host "Nothing to clean."
 } 
