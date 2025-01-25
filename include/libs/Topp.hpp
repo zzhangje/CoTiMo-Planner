@@ -116,6 +116,10 @@ class Topp {
  public:
   Topp(const std::vector<Eigen::Vector2d>& points,
        int maxIter = 30) {
+    if (points.size() < 3) {
+      log_error("The number of points should be at least 3.");
+      throw std::invalid_argument("The number of points should be at least 3.");
+    }
     this->points = points;
     this->n = points.size() - 1;
     this->iter = 0;

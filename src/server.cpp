@@ -1,4 +1,5 @@
 ﻿#include <grpcpp/grpcpp.h>
+#include <windows.h>
 
 #include <atomic>
 #include <eigen3/Eigen/Eigen>

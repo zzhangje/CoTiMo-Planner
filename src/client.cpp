@@ -1,8 +1,5 @@
 ﻿#include <grpcpp/grpcpp.h>
-#include <windows.h>
-
-#include <mutex>
-#include <thread>
+#include <matplot/matplot.h>
 
 #include "config.h"
 #include "log.hpp"
@@ -14,13 +11,8 @@ using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryState;
 using com::nextinnovation::armtrajectoryservice::Response;
-using google::protobuf::RepeatedPtrField;
 using grpc::Channel;
 using grpc::ClientContext;
-
-std::mutex mtx;
-RepeatedPtrField<ArmTrajectoryState> trajectory;
-bool newTrajectory = false;
 
 class Client {
  public:
@@ -32,14 +24,10 @@ class Client {
 
     if (auto status = stub_->generate(&context, request, &response); status.ok()) {
       if (response.has_trajectory()) {
-        {
-          std::unique_lock<std::mutex> lck(mtx);
-          trajectory = response.trajectory().states();
-          newTrajectory = true;
-        }
+        auto states = response.trajectory().states();
 
         // print the trajectory
-        for (const ArmTrajectoryState& state : trajectory) {
+        for (const ArmTrajectoryState& state : states) {
           log_info("t=%.3f, h=%.2f, θ=%.2f, vel_h=%.2f, vel_θ=%.2f, V_h=%.2f, V_θ=%.2f",
                    state.timestamp(),
                    state.position().shoulderheightmeter(),
@@ -49,7 +37,11 @@ class Client {
                    state.voltage().shouldervoltagevolt(),
                    state.voltage().elbowvoltagevolt());
         }
+      } else {
+        log_warn("The response does not contain the trajectory.");
       }
+    } else {
+      log_error("The response status is not OK: %s", status.error_message().c_str());
     }
   }
 
@@ -57,97 +49,40 @@ class Client {
   std::unique_ptr<ArmTrajectoryService::Stub> stub_;
 };
 
-// 窗口过程函数声明
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-  switch (uMsg) {
-    case WM_DESTROY:
-      PostQuitMessage(0);
-      return 0;
+int main() {
+  std::cout << "=== Press Ctrl+C to exit ===" << std::endl
+            << std::endl;
 
-    case WM_PAINT: {
-      PAINTSTRUCT ps;
-      HDC hdc = BeginPaint(hwnd, &ps);
+  while (1) {
+    auto request = std::make_shared<ArmTrajectoryParameter>();
 
-      // 获取设备上下文
-      HDC hdcMem = CreateCompatibleDC(hdc);
-      HBITMAP hBitmap = CreateCompatibleBitmap(hdc, 200, 200);
-      SelectObject(hdcMem, hBitmap);
+    std::cout << "$ Please enter the shoulder height in meters: ";
+    double shoulderHeight;
+    std::cin >> shoulderHeight;
+    request->mutable_start()->set_shoulderheightmeter(shoulderHeight);
 
-      // 设置背景颜色
-      SetBkColor(hdcMem, RGB(255, 255, 255));
-      FillRect(hdcMem, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
+    std::cout << "$ Please enter the elbow position in degrees: ";
+    double elbowPosition;
+    std::cin >> elbowPosition;
+    request->mutable_start()->set_elbowpositiondegree(elbowPosition);
 
-      // get values from shared memory
-      bool newTraj = false;
-      RepeatedPtrField<ArmTrajectoryState> traj;
-      {
-        std::unique_lock<std::mutex> lck(mtx);
-        if (newTrajectory) {
-          traj = trajectory;
-          newTraj = true;
-          newTrajectory = false;
-        }
-      }
+    std::cout << "$ Please enter the end shoulder height in meters: ";
+    double endShoulderHeight;
+    std::cin >> endShoulderHeight;
+    request->mutable_end()->set_shoulderheightmeter(endShoulderHeight);
 
-      // 将内存设备上下文的内容复制到屏幕设备上下文
-      BitBlt(hdc, 0, 0, 200, 200, hdcMem, 0, 0, SRCCOPY);
+    std::cout << "$ Please enter the end elbow position in degrees: ";
+    double endElbowPosition;
+    std::cin >> endElbowPosition;
+    request->mutable_end()->set_elbowpositiondegree(endElbowPosition);
 
-      // 释放资源
-      DeleteObject(hBitmap);
-      DeleteDC(hdcMem);
+    request->set_hasalgae(false);
+    request->set_hascoral(false);
 
-      EndPaint(hwnd, &ps);
-      return 0;
-    }
+    log_info("Sending request: start(%.2f, %.2f), end(%.2f, %.2f), algae(%d), coral(%d)",
+             shoulderHeight, elbowPosition, endShoulderHeight, endElbowPosition,
+             request->hasalgae(), request->hascoral());
+    Client("localhost:" + config::params::GRPC_PORT, *request);
   }
-
-  return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-// 主函数
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-  const char CLASS_NAME[] = "Sample Window Class";
-
-  WNDCLASS wc = {};
-  wc.lpfnWndProc = WindowProc;
-  wc.hInstance = hInstance;
-  wc.lpszClassName = CLASS_NAME;
-
-  RegisterClass(&wc);
-
-  HWND hwnd = CreateWindowEx(
-      0,                             // 扩展样式
-      CLASS_NAME,                    // 窗口类名
-      "Cyber Planner 2025",          // 窗口标题
-      WS_OVERLAPPEDWINDOW,           // 窗口样式
-      CW_USEDEFAULT, CW_USEDEFAULT,  // 窗口位置
-      CW_USEDEFAULT, CW_USEDEFAULT,  // 窗口大小
-      NULL,                          // 父窗口句柄
-      NULL,                          // 菜单句柄
-      hInstance,                     // 实例句柄
-      NULL                           // 创建参数
-  );
-
-  if (hwnd == NULL) {
-    return 0;
-  }
-
-  ShowWindow(hwnd, nCmdShow);
-
-  auto request = std::make_shared<ArmTrajectoryParameter>();
-  request->mutable_start()->set_shoulderheightmeter(0.0);
-  request->mutable_start()->set_elbowpositiondegree(0.0);
-  request->mutable_end()->set_shoulderheightmeter(0.0);
-  request->mutable_end()->set_elbowpositiondegree(90.0);
-  request->set_hasalgae(false);
-  request->set_hascoral(false);
-  Client("localhost:" + config::params::GRPC_PORT, *request);
-
-  MSG msg = {};
-  while (GetMessage(&msg, NULL, 0, 0)) {
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
-  }
-
   return 0;
 }

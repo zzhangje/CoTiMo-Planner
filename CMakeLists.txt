@@ -39,6 +39,7 @@ file(GLOB_RECURSE HEADER_FILES
 )
 
 add_executable(server
+    # WIN32
     src/server.cpp
     ${HEADER_FILES}
 )
@@ -51,7 +52,6 @@ target_link_libraries(server
 )
 
 add_executable(client
-    WIN32
     src/client.cpp
     ${HEADER_FILES}
 )
@@ -61,16 +61,4 @@ target_include_directories(client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
 target_link_libraries(client
     trajectory_native_proto
     Eigen3::Eigen
-)
-
-add_executable(plot
-src/plot.cpp
-${HEADER_FILES}
-)
-
-target_include_directories(plot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
-
-target_link_libraries(plot
-trajectory_native_proto
-Eigen3::Eigen
 )
