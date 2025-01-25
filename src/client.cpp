@@ -9,7 +9,6 @@ using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;
 using com::nextinnovation::armtrajectoryservice::Response;
 using grpc::Channel;
 using grpc::ClientContext;
-using namespace config::dynamic;
 
 class Client {
  public:
@@ -48,6 +47,6 @@ class Client {
 };
 
 int main() {
-  Client("localhost:" + GRPC_PORT);
+  Client("localhost:" + config::params::GRPC_PORT);
   return 0;
 }

@@ -64,3 +64,5 @@ add_executable(plot
 src/plot.cpp
 ${HEADER_FILES}
 )
+
+target_include_directories(plot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)

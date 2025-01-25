@@ -28,7 +28,7 @@ constexpr int constexprFloor(double x) {
   return (x < 0) ? static_cast<int>(x) - 1 : static_cast<int>(x);
 }
 
-namespace dynamic {
+namespace params {
 constexpr double OBSTACLE_OFFSET = 100.0;
 constexpr double OBSTACLE_FIELD_REDUCTION = 0.6;
 constexpr double ASTAR_HEURISTIC_COEFFICIENT = 1.0;

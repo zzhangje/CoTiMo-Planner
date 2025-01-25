@@ -17,7 +17,6 @@ using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
-using namespace config::dynamic;
 
 class Service final : public ArmTrajectoryService::Service {
   Status generate(ServerContext* context, const ArmTrajectoryParameter* request,
@@ -93,9 +92,9 @@ int main() {
   ServerBuilder builder;
 
   builder.AddChannelArgument(GRPC_ARG_MAX_CONCURRENT_STREAMS, 1);
-  builder.AddListeningPort("0.0.0.0:" + GRPC_PORT, grpc::InsecureServerCredentials());
+  builder.AddListeningPort("0.0.0.0:" + config::params::GRPC_PORT, grpc::InsecureServerCredentials());
   builder.RegisterService(&service);
-  log_info(("Server is running on 0.0.0.0:" + GRPC_PORT).c_str());
+  log_info(("Server is running on 0.0.0.0:" + config::params::GRPC_PORT).c_str());
   builder.BuildAndStart()->Wait();
 
   return 0;

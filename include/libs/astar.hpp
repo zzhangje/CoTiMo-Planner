@@ -6,8 +6,6 @@
 #include "config.h"
 #include "log.hpp"
 
-using namespace config::dynamic;
-
 namespace astar {
 bool astar(const std::vector<std::vector<bool>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,
@@ -148,7 +146,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
       Eigen::Vector2i next = current + d;
       // out of bounds or obstacle
       if (next(0) < 0 || next(0) >= n || next(1) < 0 || next(1) >= m ||
-          grid_map[next(0)][next(1)] > OBSTACLE_OFFSET - .01) {
+          grid_map[next(0)][next(1)] > config::params::OBSTACLE_OFFSET - .01) {
         continue;
       }
 
@@ -171,7 +169,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
                               (current - next).lpNorm<1>();
         parent[next(0)][next(1)] = current;
         open.insert(
-            std::make_pair(g[next(0)][next(1)] + ASTAR_HEURISTIC_COEFFICIENT *
+            std::make_pair(g[next(0)][next(1)] + config::params::ASTAR_HEURISTIC_COEFFICIENT *
                                                      (goal - next).lpNorm<2>(),
                            next));
       }

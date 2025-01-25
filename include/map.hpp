@@ -8,7 +8,6 @@
 #include "config.h"
 #include "log.hpp"
 
-using namespace config::dynamic;
 using namespace config::alphabot;
 
 double clamp(double x, double min, double max) {
@@ -84,8 +83,8 @@ void getGridMap(ObjectType type,
       ELEVATOR_GRID_NUMS,
       std::vector<double>(ARM_GRID_NUMS, true));
   auto env = Object(ObjectType::ENV);
-  const double obstacle = OBSTACLE_OFFSET;
-  const double reduce = OBSTACLE_FIELD_REDUCTION;
+  const double obstacle = config::params::OBSTACLE_OFFSET;
+  const double reduce = config::params::OBSTACLE_FIELD_REDUCTION;
   // bound of the map
   for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
     map[tt][0] = obstacle * reduce;

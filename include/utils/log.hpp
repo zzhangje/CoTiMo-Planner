@@ -72,7 +72,7 @@ static void stdout_callback(log_Event *ev) {
   char buf[16];
   buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
 #ifdef LOG_USE_COLOR
-  if (config::dynamic::IS_DEBUG) {
+  if (config::params::IS_DEBUG) {
     fprintf(
         (FILE *)ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
         buf, level_colors[ev->level], level_strings[ev->level],
@@ -83,7 +83,7 @@ static void stdout_callback(log_Event *ev) {
         buf, level_colors[ev->level], level_strings[ev->level]);
   }
 #else
-  if (config::dynamic::IS_DEBUG) {
+  if (config::params::IS_DEBUG) {
     fprintf(
         (FILE *)ev->udata, "%s %-5s %s:%d: ",
         buf, level_strings[ev->level], ev->file, ev->line);
@@ -165,7 +165,7 @@ static void init_event(log_Event *ev, void *udata) {
 }
 
 void log_log(int level, const char *file, int line, const char *fmt, ...) {
-  if (level == LOG_DEBUG && !config::dynamic::IS_DEBUG) {
+  if (level == LOG_DEBUG && !config::params::IS_DEBUG) {
     return;
   }
 
