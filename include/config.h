@@ -32,10 +32,10 @@ constexpr double OBSTACLE_FIELD_REDUCTION = 0.6;
 constexpr double ASTAR_HEURISTIC_COEFFICIENT = 1.0;
 const std::string GRPC_PORT = "58214";
 const bool IS_DEBUG = true;
-}  // namespace dynamic
+}  // namespace params
 
 namespace alphabot {
-const std::string VERSION = "8214.0.0";  // for cache version control
+const std::string ROBOT_PARAMS_VERSION = "8214.0.0";  // for cache version control
 
 // the prohitbit area of the drivetrain
 constexpr double ROBOT_WIDTH = 0.7;        // the width of the prohitbit area
