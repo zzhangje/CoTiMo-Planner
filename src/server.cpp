@@ -1,4 +1,5 @@
 ﻿#include <grpcpp/grpcpp.h>
+
 #include <atomic>
 #include <eigen3/Eigen/Eigen>
 
@@ -9,7 +10,9 @@
 #include "map.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
 
-using namespace com::nextinnovation::armtrajectoryservice;
+using com::nextinnovation::armtrajectoryservice::ArmPositionState;
+using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
+using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;

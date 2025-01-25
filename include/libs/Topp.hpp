@@ -140,16 +140,12 @@ class Topp {
 
     for (int iter = 0; iter < maxIter; ++iter) {
       this->iter++;
+      Eigen::VectorXd x0 = x;
       int ret = lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
       if (ret < 0) {
         log_error("L-BFGS optimization failed with code %d.", ret);
         break;
       }
-
-      // std::cout << x.segment(0, n).transpose() << std::endl;
-      // std::cout << x.segment(n, n + 1).transpose() << std::endl;
-      // std::cout << x.segment(2 * n + 1, n + 1).transpose() << std::endl;
-      // std::cout << x.segment(3 * n + 2, n).transpose() << std::endl;
 
       now = std::chrono::steady_clock::now();
       auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -170,9 +166,10 @@ class Topp {
       eta = max(eta + rho * (P * x - q), 0);
       rho = std::min(rho * (1 + GAMMA), BETA);
 
-      if (iter % 10 == 0) {
-        log_debug("iter: %2d, duration: %3d.%3dms, loss: %f", iter, (millis - lastMillis) % 1000, (micros - lastMicros) % 1000, cost);
+      if (true || iter % 10 == 0) {
+        log_debug("iter: %2d, duration: %3d.%3dms, loss: %f, dx: %f", iter, (millis - lastMillis) % 1000, (micros - lastMicros) % 1000, cost, (x - x0).norm());
       }
+
       lastMillis = millis;
       lastMicros = micros;
     }
@@ -181,7 +178,8 @@ class Topp {
     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
                       now.time_since_epoch())
                       .count();
-    log_info("TOPP problem solved, total duration: %3d.%3dms, iterations: %d, loss: %f", (millis - beginTime) / 1000, (millis - beginTime) % 1000, maxIter, cost);
+    std::cout << millis - beginTime << std::endl;
+    log_info("TOPP problem solved, total duration: %3d,%3dms, iterations: %d, loss: %f", (millis - beginTime) / 1000, (millis - beginTime) % 1000, maxIter, cost);
     return;
   }
 
@@ -199,9 +197,11 @@ class Topp {
 
     log_debug("qt1: %f", qt1(0));
     log_debug("qt2: %f", qt2(0));
-    log_debug("ak: %f", ak(0));
-    log_debug("bk: %f", bk(0));
-    log_debug("ck: %f", ck(0));
+    log_debug("qr1: %f", qr1(0));
+    log_debug("qr2: %f", qr2(0));
+    log_debug("ak1: %f", ak(0));
+    log_debug("bk1: %f", bk(0));
+    log_debug("ck1: %f", ck(0));
 
     for (int i = 0; i < n; ++i) {
       state = trajectory->add_states();

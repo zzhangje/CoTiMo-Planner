@@ -4,35 +4,25 @@
 #include "log.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
 
-using namespace com::nextinnovation::armtrajectoryservice;
+using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
+using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;
+using com::nextinnovation::armtrajectoryservice::Response;
 using grpc::Channel;
 using grpc::ClientContext;
 using namespace config::dynamic;
-
-struct TrajectoryConfig {
-  struct State {
-    double shoulder;
-    double elbow;
-  };
-  State start{0.5, 180.0};
-  State end{1.0, 180.0};
-  bool hasAlgae{true};
-  bool hasCoral{false};
-};
 
 class Client {
  public:
   explicit Client(const std::string& addr)
       : stub_(ArmTrajectoryService::NewStub(
             grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()))) {
-    const TrajectoryConfig config;
     ArmTrajectoryParameter request;
-    request.mutable_start()->set_shoulderheightmeter(config.start.shoulder);
-    request.mutable_start()->set_elbowpositiondegree(config.start.elbow);
-    request.mutable_end()->set_shoulderheightmeter(config.end.shoulder);
-    request.mutable_end()->set_elbowpositiondegree(config.end.elbow);
-    request.set_hasalgae(config.hasAlgae);
-    request.set_hascoral(config.hasCoral);
+    request.mutable_start()->set_shoulderheightmeter(0.5);
+    request.mutable_start()->set_elbowpositiondegree(180.0);
+    request.mutable_end()->set_shoulderheightmeter(1.0);
+    request.mutable_end()->set_elbowpositiondegree(180.0);
+    request.set_hasalgae(false);
+    request.set_hascoral(false);
 
     ClientContext context;
     Response response;
