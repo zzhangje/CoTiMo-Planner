@@ -13,11 +13,23 @@
 #include <stdio.h>
 #include <time.h>
 
+#include <iostream>
+
 #include "config.h"
 
 #define LOG_VERSION "0.1.0"
 #define MAX_CALLBACKS 32
 #define LOG_USE_COLOR
+
+void showConsole() {
+  DWORD processId = GetCurrentProcessId();
+  HWND hwnd = GetConsoleWindow();
+  if (!hwnd) {
+    AllocConsole();
+    hwnd = GetConsoleWindow();
+  }
+  ShowWindow(hwnd, SW_SHOW);
+}
 
 typedef struct {
   va_list ap;

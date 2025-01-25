@@ -9,7 +9,7 @@ project(Cyber-Planner)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_definitions(-D_USE_MATH_DEFINES)
 
@@ -19,11 +19,15 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
 )
 
+add_subdirectory(imgui)
+
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(Threads)
-find_package(Matplot++ REQUIRED)
+find_package(glfw3 REQUIRED)
+find_package(OpenGL REQUIRED)
+# find_package(imgui CONFIG REQUIRED)
 
 add_library(trajectory_native_proto proto/ArmTrajectoryService.proto)
 target_link_libraries(trajectory_native_proto PUBLIC protobuf::libprotobuf gRPC::grpc gRPC::grpc++ gRPC::grpc++_reflection)
@@ -39,7 +43,6 @@ file(GLOB_RECURSE HEADER_FILES
 )
 
 add_executable(server
-    # WIN32
     src/server.cpp
     ${HEADER_FILES}
 )
@@ -62,3 +65,11 @@ target_link_libraries(client
     trajectory_native_proto
     Eigen3::Eigen
 )
+
+add_executable(test
+    src/test.cpp
+    ${HEADER_FILES}
+)
+
+target_link_libraries(test PRIVATE imgui glfw ${OPENGL_LIBRARIES})
+target_include_directories(test PRIVATE ${CMAKE_SOURCE_DIR}/imgui)

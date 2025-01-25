@@ -1,41 +1,24 @@
-// #include <matplot/matplot.h>
+#include <windows.h>
 
-// #include <Eigen/Eigen>
+namespace visualize {
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  switch (uMsg) {
+    case WM_DESTROY:
+      PostQuitMessage(0);
+      return 0;
 
-// #include "config.h"
-// #include "log.hpp"
-// #include "map.hpp"
+    case WM_PAINT: {
+      PAINTSTRUCT ps;
+      HDC hdc = BeginPaint(hwnd, &ps);
 
-// using namespace config::alphabot;
+      // 绘制一个简单的矩形
+      FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
 
-// void visualizeTrajectory(const std::vector<std::vector<double>>& armGrid,
-//                          const std::vector<std::vector<double>>& expGrid,
-//                          const std::vector<Eigen::Vector2d>& path) {
-//   using namespace matplot;
+      EndPaint(hwnd, &ps);
+      return 0;
+    }
+  }
 
-//   log_info("Visualizing the trajectory...");
-
-//   auto x = linspace(0, 3 * pi, 200);
-//   auto y = transform(x, [&](double x) { return cos(x) + rand(0, 1); });
-//   auto c = linspace(1, 10, x.size());
-
-//   scatter(x, y, std::vector<double>{}, c);
-
-//   //   for (int tt = 0; tt < armGrid.size(); tt++) {
-//   //     for (int rr = 0; rr < armGrid[tt].size(); rr++) {
-//   //       Eigen::Vector2d tr = getTR(tt, rr);
-//   //       double t = tr.x(), r = tr.y();
-//   //       if (armGrid[tt][rr] > config::params::OBSTACLE_OFFSET - .01) {
-//   //         auto s = scatter(t, r, 6);
-//   //         s->marker_face_color("r");
-//   //         s->marker_color("r");
-//   //       } else if (expGrid[tt][rr] > config::params::OBSTACLE_OFFSET - .01) {
-//   //         auto s = scatter(t, r, 6);
-//   //         s->marker_face_color("b");
-//   //         s->marker_color("b");
-//   //       }
-//   //     }
-//   //   }
-
-//   //   show();
-// }
+  return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+}  // namespace visualize

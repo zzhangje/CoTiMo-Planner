@@ -1,5 +1,4 @@
 ﻿#include <grpcpp/grpcpp.h>
-#include <matplot/matplot.h>
 
 #include "config.h"
 #include "log.hpp"
@@ -13,6 +12,8 @@ using com::nextinnovation::armtrajectoryservice::ArmTrajectoryState;
 using com::nextinnovation::armtrajectoryservice::Response;
 using grpc::Channel;
 using grpc::ClientContext;
+
+using namespace config::alphabot;
 
 class Client {
  public:
@@ -56,22 +57,22 @@ int main() {
   while (1) {
     auto request = std::make_shared<ArmTrajectoryParameter>();
 
-    std::cout << "$ Please enter the shoulder height in meters: ";
+    std::cout << "$ Please enter the shoulder height in meters, (" << ELEVATOR_MIN_POSITION_METER << ',' << ELEVATOR_MAX_POSITION_METER << "): ";
     double shoulderHeight;
     std::cin >> shoulderHeight;
     request->mutable_start()->set_shoulderheightmeter(shoulderHeight);
 
-    std::cout << "$ Please enter the elbow position in degrees: ";
+    std::cout << "$ Please enter the elbow position in degrees, (" << ARM_MIN_THETA_DEGREE << ',' << ARM_MAX_THETA_DEGREE << "): ";
     double elbowPosition;
     std::cin >> elbowPosition;
     request->mutable_start()->set_elbowpositiondegree(elbowPosition);
 
-    std::cout << "$ Please enter the end shoulder height in meters: ";
+    std::cout << "$ Please enter the end shoulder height in meters, (" << ELEVATOR_MIN_POSITION_METER << ',' << ELEVATOR_MAX_POSITION_METER << "): ";
     double endShoulderHeight;
     std::cin >> endShoulderHeight;
     request->mutable_end()->set_shoulderheightmeter(endShoulderHeight);
 
-    std::cout << "$ Please enter the end elbow position in degrees: ";
+    std::cout << "$ Please enter the end elbow position in degrees, (" << ARM_MIN_THETA_DEGREE << ',' << ARM_MAX_THETA_DEGREE << "): ";
     double endElbowPosition;
     std::cin >> endElbowPosition;
     request->mutable_end()->set_elbowpositiondegree(endElbowPosition);

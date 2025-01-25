@@ -116,7 +116,8 @@
         "netfwd": "cpp",
         "hash_map": "cpp",
         "rope": "cpp",
-        "slist": "cpp"
+        "slist": "cpp",
+        "core": "cpp"
     },
     "C_Cpp.clang_format_style": "{ BasedOnStyle: Google, IndentWidth: 2, ColumnLimit: 0 }",
     "C_Cpp.default.includePath": [

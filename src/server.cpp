@@ -3,7 +3,10 @@
 
 #include <atomic>
 #include <eigen3/Eigen/Eigen>
+#include <mutex>
+#include <thread>
 
+#include "Object.hpp"
 #include "Topp.hpp"
 #include "astar.hpp"
 #include "config.h"
@@ -14,10 +17,15 @@
 using com::nextinnovation::armtrajectoryservice::ArmPositionState;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;
+using google::protobuf::RepeatedPtrField;
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
+
+RepeatedPtrField<ArmTrajectoryState>* sharedTrajectory = new RepeatedPtrField<ArmTrajectoryState>();
+bool hasNewTrajectory = false;
+std::mutex trajectoryMutex;
 
 class Service final : public ArmTrajectoryService::Service {
   Status generate(ServerContext* context, const ArmTrajectoryParameter* request,
@@ -69,12 +77,19 @@ class Service final : public ArmTrajectoryService::Service {
     Topp topp(getTRs(sampledPath));
     topp.getTrajectory(trajectory);
     *trajectory->mutable_parameter() = *request;
+
+    {
+      std::unique_lock<std::mutex> lock(trajectoryMutex);
+      sharedTrajectory->CopyFrom(trajectory->states());
+      hasNewTrajectory = true;
+    }
+
     log_info("Generated trajectory with %d points", trajectory->states_size());
     return Status::OK;
   }
 };
 
-int main() {
+int main(int argc, char* argv[]) {
   log_info(
       "Welcome to Cyber Planner 2025!"
       "\n"
