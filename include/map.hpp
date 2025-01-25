@@ -1,6 +1,8 @@
 #ifndef MAP_HPP
 #define MAP_HPP
 
+#include <GLFW/glfw3.h>
+
 #include <Eigen/Eigen>
 #include <vector>
 
@@ -10,11 +12,17 @@
 
 using namespace config::alphabot;
 
-double clamp(double x, double min, double max) {
-  return std::min(std::max(x, min), max);
+double clamp(double x, double lowerBound, double upperBound) {
+  if (x < lowerBound) return lowerBound;
+  if (x > upperBound) return upperBound;
+  return x;
 }
 
-int clamp(int x, int min, int max) { return std::min(std::max(x, min), max); }
+int clamp(int x, int lowerBound, int upperBound) {
+  if (x < lowerBound) return lowerBound;
+  if (x > upperBound) return upperBound;
+  return x;
+}
 
 Eigen::Vector2i getGridIdx(const double t, const double r) {
   return Eigen::Vector2i(floor((clamp(t, ELEVATOR_MIN_POSITION_METER,
@@ -72,7 +80,6 @@ void getGridMap(ObjectType type, std::vector<std::vector<bool>>& map) {
       map[tt][rr] = !env.intersect(arm);
     }
   }
-  log_debug("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
   return;
 }
 
@@ -101,19 +108,20 @@ void getGridMap(ObjectType type,
       if (arm.intersect(env)) {
         map[tt][rr] = obstacle;
       } else {
-        map[tt][rr] = std::max(map[tt - 1][rr - 1],
-                               std::max(map[tt - 1][rr], map[tt][rr - 1])) *
-                      reduce;
+        double max_val = map[tt - 1][rr - 1];
+        if (map[tt - 1][rr] > max_val) max_val = map[tt - 1][rr];
+        if (map[tt][rr - 1] > max_val) max_val = map[tt][rr - 1];
+        map[tt][rr] = max_val * reduce;
       }
     }
   }
   for (int tt = ELEVATOR_GRID_NUMS - 2; tt > 0; --tt) {
     for (int rr = ARM_GRID_NUMS - 2; rr > 0; --rr) {
       if (map[tt][rr] == obstacle) continue;
-      map[tt][rr] = std::max(
-          map[tt][rr], std::max(map[tt + 1][rr + 1],
-                                std::max(map[tt + 1][rr], map[tt][rr + 1])) *
-                           reduce);
+      double max_val = map[tt + 1][rr + 1];
+      if (map[tt + 1][rr] > max_val) max_val = map[tt + 1][rr];
+      if (map[tt][rr + 1] > max_val) max_val = map[tt][rr + 1];
+      map[tt][rr] = map[tt][rr] > max_val * reduce ? map[tt][rr] : max_val * reduce;
     }
   }
   for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
@@ -123,7 +131,24 @@ void getGridMap(ObjectType type,
       }
     }
   }
-  log_debug("Grid map size: %d x %d", ELEVATOR_GRID_NUMS, ARM_GRID_NUMS);
+  return;
+}
+
+void getRenderMap(GLubyte* map, const std::vector<std::vector<double>>& arm_map, const std::vector<std::vector<double>>& exp_map, std::vector<Eigen::Vector2i>& path) {
+  map = new GLubyte[3 * ELEVATOR_GRID_NUMS * ARM_GRID_NUMS];
+  for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
+    for (int rr = 0; rr < ARM_GRID_NUMS; ++rr) {
+      if (arm_map[tt][rr] > config::params::OBSTACLE_OFFSET - .01) {
+        map[3 * (tt * ARM_GRID_NUMS + rr)] = 255;
+        map[3 * (tt * ARM_GRID_NUMS + rr) + 1] = 0;
+        map[3 * (tt * ARM_GRID_NUMS + rr) + 2] = 0;
+      } else {
+        map[3 * (tt * ARM_GRID_NUMS + rr)] = 0;
+        map[3 * (tt * ARM_GRID_NUMS + rr) + 1] = 0;
+        map[3 * (tt * ARM_GRID_NUMS + rr) + 2] = int(255. * exp_map[tt][rr] / config::params::OBSTACLE_OFFSET);
+      }
+    }
+  }
   return;
 }
 
