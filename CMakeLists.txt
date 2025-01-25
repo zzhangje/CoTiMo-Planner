@@ -48,14 +48,14 @@ target_link_libraries(server
     Eigen3::Eigen
 )
 
-add_executable(Client
+add_executable(client
     src/client.cpp
     ${HEADER_FILES}
 )
 
-target_include_directories(Client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
+target_include_directories(client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
 
-target_link_libraries(Client
+target_link_libraries(client
     trajectory_native_proto
     Eigen3::Eigen
 )
@@ -63,9 +63,4 @@ target_link_libraries(Client
 add_executable(plot
 src/plot.cpp
 ${HEADER_FILES}
-)
-
-target_link_libraries(test
-    trajectory_native_proto
-    Eigen3::Eigen
 )
