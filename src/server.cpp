@@ -29,6 +29,7 @@ using grpc::Status;
 
 RepeatedPtrField<ArmTrajectoryState>* sharedTrajectory = new RepeatedPtrField<ArmTrajectoryState>();
 bool hasNewTrajectory = false;
+int requestCount = 0;
 std::mutex trajectoryMutex;
 
 class Service final : public ArmTrajectoryService::Service {
@@ -86,6 +87,7 @@ class Service final : public ArmTrajectoryService::Service {
       std::unique_lock<std::mutex> lock(trajectoryMutex);
       sharedTrajectory->CopyFrom(trajectory->states());
       hasNewTrajectory = true;
+      ++requestCount;
     }
 
     log_info("Generated trajectory with %d points", trajectory->states_size());
@@ -93,8 +95,10 @@ class Service final : public ArmTrajectoryService::Service {
   }
 };
 
-// thread function
+// render thread
 int guiRender() {
+  log_info("Starting GUI render thread...");
+
   // Initialize GLFW
   if (!glfwInit())
     return -1;
@@ -120,15 +124,24 @@ int guiRender() {
 
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+  // thread variables
+  int count = 0;
+
   // Main loop
   while (!glfwWindowShouldClose(window)) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
+    if (hasNewTrajectory) {
+      hasNewTrajectory = false;
+      count = requestCount;
+    }
+
     // Create a window
     ImGui::Begin("Hello, world!");
     ImGui::Text("This is some useful text.");
+    ImGui::Text("Request Count: %d", count);
     ImGui::End();
 
     static float data[100];
@@ -176,6 +189,7 @@ int guiRender() {
 
   glfwDestroyWindow(window);
   glfwTerminate();
+  log_warn("GUI render thread terminated.");
   return 0;
 }
 

@@ -51,9 +51,6 @@ class Client {
 };
 
 int main() {
-  std::cout << "=== Press Ctrl+C to exit ===" << std::endl
-            << std::endl;
-
   while (1) {
     auto request = std::make_shared<ArmTrajectoryParameter>();
 
@@ -84,6 +81,9 @@ int main() {
              shoulderHeight, elbowPosition, endShoulderHeight, endElbowPosition,
              request->hasalgae(), request->hascoral());
     Client("localhost:" + config::params::GRPC_PORT, *request);
+    std::cout << std::endl
+              << "=== Press Ctrl+C to exit ===" << std::endl
+              << std::endl;
   }
   return 0;
 }
