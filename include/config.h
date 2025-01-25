@@ -4,8 +4,6 @@
 #include <cmath>
 #include <string>
 
-#define OPENCV_MAIN_WINDOW_NAME "Cyber Planner 2025"
-
 namespace config {
 
 constexpr double toRadians(double degree) {

@@ -8,7 +8,8 @@ endif()
 project(Cyber-Planner)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 
 add_definitions(-D_USE_MATH_DEFINES)
 
@@ -22,6 +23,7 @@ find_package(Eigen3 CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(Threads)
+find_package(Matplot++ REQUIRED)
 
 add_library(trajectory_native_proto proto/ArmTrajectoryService.proto)
 target_link_libraries(trajectory_native_proto PUBLIC protobuf::libprotobuf gRPC::grpc gRPC::grpc++ gRPC::grpc++_reflection)
@@ -49,6 +51,7 @@ target_link_libraries(server
 )
 
 add_executable(client
+    WIN32
     src/client.cpp
     ${HEADER_FILES}
 )
@@ -66,3 +69,8 @@ ${HEADER_FILES}
 )
 
 target_include_directories(plot PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
+
+target_link_libraries(plot
+trajectory_native_proto
+Eigen3::Eigen
+)
