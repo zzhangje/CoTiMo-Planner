@@ -2,8 +2,8 @@
 
 #include "config.h"
 #include "log.hpp"
-#include "map.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
+#include "space.hpp"
 
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;

@@ -16,8 +16,8 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "log.hpp"
-#include "map.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
+#include "space.hpp"
 #include "visualize.hpp"
 
 using com::nextinnovation::armtrajectoryservice::ArmPositionState;
@@ -31,10 +31,17 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
 
+using namespace config::alphabot;
+
+// shared variables
 ArmTrajectory* sharedTrajectory = new ArmTrajectory();
 bool hasNewTrajectory = false;
 int requestCount = 0;
 std::mutex trajectoryMutex;
+
+// redirect stdout to imgui stream
+std::stringstream g_ss;
+std::streambuf* g_coutbuf = std::cout.rdbuf();
 
 class Service final : public ArmTrajectoryService::Service {
   Status generate(ServerContext* context, const ArmTrajectoryParameter* request,
@@ -79,7 +86,7 @@ class Service final : public ArmTrajectoryService::Service {
       }
     }
     log_info("Found a path with %d points.", path.size());
-    // astar::samplePath(path, sampledPath, 1);
+    astar::samplePath(path, sampledPath, 4);
     sampledPath = path;
 
     ArmTrajectory* trajectory = response->mutable_trajectory();
@@ -121,7 +128,7 @@ int guiRender() {
   ImPlot::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
   (void)io;
-  ImGui::StyleColorsDark();
+  ImGui::StyleColorsClassic();
 
   // Initialize ImGui backends
   ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -200,8 +207,12 @@ int guiRender() {
           renderTrajectory.states(simIndex + 1).position().elbowpositiondegree() * leftRatio;
     }
 
+    // Configuration window
     ImGui::Begin("Arm Trajectory");
     if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (degree)")) {
+      ImPlot::SetupAxisLimits(ImAxis_X1, ELEVATOR_MIN_POSITION_METER, ELEVATOR_MAX_POSITION_METER);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, ARM_MIN_THETA_DEGREE, ARM_MAX_THETA_DEGREE);
+
       std::vector<double> obsX, obsY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
@@ -231,6 +242,7 @@ int guiRender() {
 
     ImGui::Begin("Trajectory Params");
     if (ImPlot::BeginPlot("Shoulder Velocity", "Time (s)", "Velocity (m/s)")) {
+      ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ELEVATOR_VMAX, 1.2 * ELEVATOR_VMAX);
       double* velocityT = new double[renderTrajectory.states_size()];
       double* timestamp = new double[renderTrajectory.states_size()];
       for (int i = 0; i < renderTrajectory.states_size(); ++i) {
@@ -247,6 +259,7 @@ int guiRender() {
     }
 
     if (ImPlot::BeginPlot("Elbow Velocity", "Time (s)", "Velocity (degree/s)")) {
+      ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ARM_VMAX, 1.2 * ARM_VMAX);
       double* velocityT = new double[renderTrajectory.states_size()];
       double* timestamp = new double[renderTrajectory.states_size()];
       for (int i = 0; i < renderTrajectory.states_size(); ++i) {
@@ -263,6 +276,7 @@ int guiRender() {
     }
 
     if (ImPlot::BeginPlot("Voltage", "Time (s)", "Voltage (V)")) {
+      ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ARM_MAX_VOLTAGE, 1.2 * ARM_MAX_VOLTAGE);
       double* elbowVoltageT = new double[renderTrajectory.states_size()];
       double* shoulderVoltageT = new double[renderTrajectory.states_size()];
       double* timestamp = new double[renderTrajectory.states_size()];
@@ -283,7 +297,7 @@ int guiRender() {
     ImGui::End();
 
     ImGui::Begin("2D Projection");
-    if (ImPlot::BeginPlot("2D Projection", "X", "Y")) {
+    if (ImPlot::BeginPlot("2D Projection", "X", "Z")) {
       Object env = Object(ObjectType::ENV);
       for (int i = 0; i < env.getSegments().size(); ++i) {
         double plotX[2] = {env.getSegments()[i].getPts1X(), env.getSegments()[i].getPts2X()};
