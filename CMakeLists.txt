@@ -21,14 +21,18 @@ find_package(glfw3 REQUIRED)
 find_package(gl3w REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 
-add_subdirectory(imgui)
+add_subdirectory(
+    dependencies/imgui
+    # glew
+)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/libs
     ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/include/implot
-    ${CMAKE_CURRENT_SOURCE_DIR}/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/glew/include
 )
 
 add_library(trajectory_native_proto proto/ArmTrajectoryService.proto)
@@ -59,6 +63,7 @@ target_link_libraries(server PRIVATE
     trajectory_native_proto
     Eigen3::Eigen
     imgui
+    # glew
     glfw
     unofficial::gl3w::gl3w
     OpenGL::GL

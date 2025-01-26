@@ -15,29 +15,31 @@ Team 8214's 2025 FRC season code for superstructure motion planning, written in 
 ## Quick Start
 
 1. Install vcpkg if you haven't:
-```bash
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-./bootstrap-vcpkg.sh  # Linux/macOS
-# OR
-.\bootstrap-vcpkg.bat  # Windows
-```
+    ```bash
+    git clone https://github.com/Microsoft/vcpkg.git
+    cd vcpkg
+    ./bootstrap-vcpkg.sh  # Linux/macOS
+    # OR
+    .\bootstrap-vcpkg.bat  # Windows
+    ```
 
 2. Set VCPKG_ROOT environment variable:
-```bash
-# Linux/macOS
-export VCPKG_ROOT=/path/to/vcpkg
+    ```bash
+    # Linux/macOS
+    export VCPKG_ROOT=/path/to/vcpkg
 
-# Windows (PowerShell)
-$env:VCPKG_ROOT = "C:\path\to\vcpkg"
-```
+    # Windows (PowerShell)
+    $env:VCPKG_ROOT = "C:\path\to\vcpkg"
+    ```
 
 3. Build the project:
-```bash
-mkdir build && cd build
-cmake ..
-cmake --build .
-```
+    ```bash
+    # Linux/macOS
+    bash scripts/build.sh
+
+    # Windows
+    .\scripts\build.ps.1
+    ```
 
 ## See Also
 
