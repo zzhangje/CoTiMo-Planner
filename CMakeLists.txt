@@ -44,7 +44,7 @@ file(GLOB_RECURSE HEADER_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
 
-add_executable(server
+add_executable(server WIN32
     src/server.cpp
     src/implot/implot.cpp
     src/implot/implot_items.cpp
@@ -62,6 +62,10 @@ target_link_libraries(server PRIVATE
     glfw
     unofficial::gl3w::gl3w
     OpenGL::GL
+)
+
+set_target_properties(server PROPERTIES
+    LINK_FLAGS "/SUBSYSTEM:WINDOWS"
 )
 
 add_executable(client
