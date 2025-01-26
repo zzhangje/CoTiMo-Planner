@@ -106,7 +106,7 @@ class Service final : public ArmTrajectoryService::Service {
       }
     }
     log_info("Found a path with %d points.", path.size());
-    astar::samplePath(path, sampledPath, 6);
+    astar::samplePath(path, sampledPath, 17);
     sampledPath = path;
 
     // generate the trajectory
@@ -275,21 +275,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       double simTime = std::chrono::duration_cast<std::chrono::milliseconds>(simNow - simStart).count() / 1000.0;
       if (simTime > trajectory.states(simIndex + 1).timestamp()) {
         simIndex++;
-        log_info("--- simIndex: %d", simIndex);
         if (simIndex >= trajectory.states_size() - 1) {
           simIndex = 0;
           simStart = simNow;
         }
       }
-      double leftTime = simTime - trajectory.states(simIndex).timestamp();
-      double leftRatio = leftTime / (trajectory.states(simIndex + 1).timestamp() - trajectory.states(simIndex).timestamp());
-      log_info("simTime: %.3f, leftTime: %.3f, leftRatio: %.3f", simTime, leftTime, leftRatio);
-      t = trajectory.states(simIndex).position().shoulderheightmeter() * (1 - leftRatio) +
-          trajectory.states(simIndex + 1).position().shoulderheightmeter() * leftRatio;
-      r = trajectory.states(simIndex).position().elbowpositiondegree() * (1 - leftRatio) +
-          trajectory.states(simIndex + 1).position().elbowpositiondegree() * leftRatio;
+      double dt = simTime - trajectory.states(simIndex).timestamp();
+      double factor = dt / (trajectory.states(simIndex + 1).timestamp() - trajectory.states(simIndex).timestamp());
+      t = trajectory.states(simIndex).position().shoulderheightmeter() + factor *
+                                                                             (trajectory.states(simIndex + 1).position().shoulderheightmeter() - trajectory.states(simIndex).position().shoulderheightmeter());
+      r = trajectory.states(simIndex).position().elbowpositiondegree() + factor *
+                                                                             (trajectory.states(simIndex + 1).position().elbowpositiondegree() - trajectory.states(simIndex).position().elbowpositiondegree());
     }
-    log_info("asdfa");
 
     /**
      * Window 1: Console Log
@@ -313,17 +310,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       ImPlot::SetupAxisLimits(ImAxis_X1, ELEVATOR_MIN_POSITION_METER, ELEVATOR_MAX_POSITION_METER);
       ImPlot::SetupAxisLimits(ImAxis_Y1, ARM_MIN_THETA_DEGREE, ARM_MAX_THETA_DEGREE);
 
-      std::vector<double> obsX, obsY;
+      std::vector<double> obsX, obsY, expX, expY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
-          if (emap[t][r] > config::params::OBSTACLE_OFFSET - .01) {
+          if (amap[t][r] > config::params::OBSTACLE_OFFSET - .01) {
             Eigen::Vector2d tr = getTR(t, r);
             obsX.push_back(tr(0));
             obsY.push_back(tr(1));
+          } else if (emap[t][r] > config::params::OBSTACLE_OFFSET - .01) {
+            Eigen::Vector2d tr = getTR(t, r);
+            expX.push_back(tr(0));
+            expY.push_back(tr(1));
           }
         }
       }
       ImPlot::PlotScatter("obstacle", obsX.data(), obsY.data(), obsX.size());
+      ImPlot::PlotScatter("expanded", expX.data(), expY.data(), expX.size());
 
       double* trajX = new double[path.size()];
       double* trajY = new double[path.size()];

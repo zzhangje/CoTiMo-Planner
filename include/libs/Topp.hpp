@@ -17,6 +17,7 @@
 #define BETA 1e4
 #define GAMMA .5
 #define RHO 1e1
+#define ARC_LEN 1.
 
 using namespace com::nextinnovation::armtrajectoryservice;
 using namespace config::alphabot;
@@ -59,7 +60,7 @@ class Topp {
   /**
    * spline parameters
    */
-  Eigen::VectorXd qt, qr, qt1, qr1, qt2, qr2, arc;
+  Eigen::VectorXd qt, qr, qt1, qr1, qt2, qr2;
   Eigen::VectorXd qta, qtb, qtc, qtd, qra, qrb, qrc, qrd;
 
   /**
@@ -182,7 +183,6 @@ class Topp {
     auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(
                       now.time_since_epoch())
                       .count();
-    std::cout << millis - beginTime << std::endl;
     log_info("TOPP problem solved, total duration: %3d,%3dms, iterations: %d, loss: %f", (millis - beginTime) / 1000, (millis - beginTime) % 1000, maxIter, cost);
     return;
   }
@@ -216,7 +216,7 @@ class Topp {
       state->mutable_voltage()->set_elbowvoltagevolt(ARM_Kv * qr1(i) * ck(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
       state->mutable_velocity()->set_shouldervelocitymeterpersecond(qt1(i) * ck(i));
       state->mutable_velocity()->set_elbowvelocitydegreepersecond(qr1(i) * ck(i));
-      t += arc(i) * 2 / (ck(i) + ck(i + 1));
+      t += ARC_LEN * 2 / (ck(i) + ck(i + 1));
     }
 
     state = trajectory->add_states();
@@ -236,24 +236,22 @@ class Topp {
     Eigen::VectorXd dk = x.segment(getD(0), lenD());
 
     timestamp.clear(), position.clear(), voltage.clear(), velocity.clear();
+    double t = 0;
 
-    timestamp.push_back(0);
-    position.push_back(points[0]);
-    voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(0) * ck(0) + ELEVATOR_Ka * (qt2(0) * ak(0) + qt1(0) * bk(0)), ARM_Kv * qr1(0) * ck(0) + ARM_Ka * (qr2(0) * ak(0) + qr1(0) * bk(0))));
-    velocity.push_back(Eigen::Vector2d(qt1(0) * ck(0), qr1(0) * ck(0)));
-
-    for (int i = 1; i < n; ++i) {
-      timestamp.push_back(arc(i - 1) * 2 / (ck(i) + ck(i - 1)));
+    for (int i = 0; i < n; ++i) {
+      timestamp.push_back(t);
       position.push_back(points[i]);
       voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)), ARM_Kv * qr1(i) * ck(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i))));
       velocity.push_back(Eigen::Vector2d(qt1(i) * ck(i), qr1(i) * ck(i)));
+      t += ARC_LEN * 2 / (ck(i) + ck(i + 1));
     }
 
-    timestamp.push_back(arc(n - 1) * 2 / (ck(n) + ck(n - 1)));
+    timestamp.push_back(t);
     position.push_back(points[n]);
     voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n), ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n)));
     velocity.push_back(Eigen::Vector2d(qt1(n) * ck(n), qr1(n) * ck(n)));
-    log_info("TOPP parameters generated.");
+
+    return;
   }
 
  private:
@@ -271,18 +269,9 @@ class Topp {
 
     qt1 = Eigen::VectorXd::Zero(n + 1), qr1 = Eigen::VectorXd::Zero(n + 1),
     qt2 = Eigen::VectorXd::Zero(n + 1), qr2 = Eigen::VectorXd::Zero(n + 1);
-    arc = Eigen::VectorXd::Zero(n);
     for (int i = 0; i < n; ++i) {
       qt1(i) = qtc(i), qr1(i) = qrc(i);
       qt2(i) = 2 * qtb(i), qr2(i) = 2 * qrb(i);
-      for (double u = .01; u < 1; u += .01) {
-        arc(i) +=
-            .01 * sqrt(pow(3 * qta(i) * u * u + 2 * qtb(i) * u + qtc(i), 2) +
-                       pow(3 * qra(i) * u * u + 2 * qrb(i) * u + qrc(i), 2));
-      }
-      arc(i) += .005 * (sqrt(pow(3 * qta(i) + 2 * qtb(i) + qtc(i), 2) +
-                             pow(3 * qra(i) + 2 * qrb(i) + qrc(i), 2)) +
-                        sqrt(qtc(i) * qtc(i) + qrc(i) * qrc(i)));
     }
     qt1(n) = 3 * qta(n - 1) + 2 * qtb(n - 1) + qtc(n - 1);
     qr1(n) = 3 * qra(n - 1) + 2 * qrb(n - 1) + qrc(n - 1);
@@ -309,7 +298,7 @@ class Topp {
      */
     f = Eigen::SparseVector<double>(n_var);
     for (int i = 0; i < n; ++i) {
-      f.insert(getD(i)) = 2 * arc(i);
+      f.insert(getD(i)) = 2 * ARC_LEN;
     }
     log_debug("Setting up TOPP problem[4/] linear coefficients initialized.");
 
@@ -358,7 +347,7 @@ class Topp {
      * 2(s_{k+1} - s_k) * a_k + b_k - b_{k+1} = 0
      */
     for (int i = 0; i < n; ++i) {
-      G.insert(n_eq_cnt, getA(i)) = 2 * arc(i);
+      G.insert(n_eq_cnt, getA(i)) = 2 * ARC_LEN;
       G.insert(n_eq_cnt, getB(i)) = 1;
       G.insert(n_eq_cnt, getB(i + 1)) = -1;
       ++n_eq_cnt;

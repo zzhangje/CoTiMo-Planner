@@ -19,6 +19,8 @@ class Client {
   explicit Client(const std::string& addr, const ArmTrajectoryParameter& request)
       : stub_(ArmTrajectoryService::NewStub(
             grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()))) {
+    auto start = std::chrono::high_resolution_clock::now();
+
     ClientContext context;
     Response response;
 
@@ -43,6 +45,10 @@ class Client {
     } else {
       log_error("The response status is not OK: %s", status.error_message().c_str());
     }
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    log_info("Total duration: %d,%dms", duration.count() / 1000, duration.count() % 1000);
   }
 
  private:

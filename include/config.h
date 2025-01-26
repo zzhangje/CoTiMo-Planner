@@ -28,7 +28,7 @@ constexpr int constexprFloor(double x) {
 
 namespace params {
 constexpr double OBSTACLE_OFFSET = 100.0;
-constexpr double OBSTACLE_FIELD_REDUCTION = 0.6;
+constexpr double OBSTACLE_FIELD_REDUCTION = 0.3;
 constexpr double ASTAR_HEURISTIC_COEFFICIENT = 1.0;
 const std::string GRPC_PORT = "58214";
 const bool IS_DEBUG = true;
@@ -80,8 +80,8 @@ constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
 constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
 
 // the properties of the grid map
-constexpr double ELEVATOR_GRID_SIZE = 0.05;
-constexpr double ARM_GRID_SIZE = 5;
+constexpr double ELEVATOR_GRID_SIZE = .01;
+constexpr double ARM_GRID_SIZE = 2.;
 constexpr int ELEVATOR_GRID_NUMS = constexprFloor((ELEVATOR_MAX_POSITION_METER - ELEVATOR_MIN_POSITION_METER) / ELEVATOR_GRID_SIZE) + 1;
 constexpr int ARM_GRID_NUMS = constexprFloor((ARM_MAX_THETA_DEGREE - ARM_MIN_THETA_DEGREE) / ARM_GRID_SIZE) + 1;
 };  // namespace alphabot
