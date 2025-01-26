@@ -21,14 +21,15 @@ find_package(glfw3 REQUIRED)
 find_package(gl3w REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 
+add_subdirectory(imgui)
+
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/libs
     ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/include/implot
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui
 )
-
-add_subdirectory(imgui)
 
 add_library(trajectory_native_proto proto/ArmTrajectoryService.proto)
 target_link_libraries(trajectory_native_proto PUBLIC protobuf::libprotobuf gRPC::grpc gRPC::grpc++ gRPC::grpc++_reflection)

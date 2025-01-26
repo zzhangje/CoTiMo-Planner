@@ -54,18 +54,20 @@ constexpr double ARM_MIN_THETA_DEGREE = 0;
 constexpr double ARM_MAX_THETA_DEGREE = 350;
 
 // the properties of the elevator motor
-constexpr double ELEVATOR_Kv = 1;
-constexpr double ELEVATOR_Ka = 1;
-constexpr double ELEVATOR_MAX_RPS = 2;
-constexpr double ELEVATOR_MAX_RPSS = 0.01;
+// constexpr double ELEVATOR_Kv = 50.8;
+constexpr double ELEVATOR_Kv = .001;
+constexpr double ELEVATOR_Ka = .001;
+constexpr double ELEVATOR_MAX_RPS = 0x3f3f3f3f;
+constexpr double ELEVATOR_MAX_RPSS = 0x3f3f3f3f;
 constexpr double ELEVATOR_REDUCTION = 1.0;
 constexpr double ELEVATOR_ROUNDS_2_POSITION = 1.0;
 
 // the properties of the arm motor
-constexpr double ARM_Kv = 1;
-constexpr double ARM_Ka = 1;
-constexpr double ARM_MAX_RPS = 2;
-constexpr double ARM_MAX_RPSS = 0.01;
+// constexpr double ARM_Kv = 50.8;
+constexpr double ARM_Kv = .001;
+constexpr double ARM_Ka = .001;
+constexpr double ARM_MAX_RPS = 0x3f3f3f3f;
+constexpr double ARM_MAX_RPSS = 0x3f3f3f3f;
 constexpr double ARM_REDUCTION = 1.0;
 constexpr double ARM_ROUNDS_2_DEGREE = 360.0;
 

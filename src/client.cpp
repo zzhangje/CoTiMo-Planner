@@ -4,7 +4,6 @@
 #include "log.hpp"
 #include "map.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
-#include "visualize.hpp"
 
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryService;

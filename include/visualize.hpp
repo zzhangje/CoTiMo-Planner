@@ -1,24 +1,25 @@
-#include <windows.h>
+#ifndef VISUALIZE_HPP
+#define VISUALIZE_HPP
+
+#include <GLFW/glfw3.h>
+#include <implot.h>
+
+#include "config.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+using namespace config::alphabot;
 
 namespace visualize {
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-  switch (uMsg) {
-    case WM_DESTROY:
-      PostQuitMessage(0);
-      return 0;
 
-    case WM_PAINT: {
-      PAINTSTRUCT ps;
-      HDC hdc = BeginPaint(hwnd, &ps);
-
-      // 绘制一个简单的矩形
-      FillRect(hdc, &ps.rcPaint, (HBRUSH)(COLOR_WINDOW + 1));
-
-      EndPaint(hwnd, &ps);
-      return 0;
-    }
+void renderMap(const std::vector<std::vector<double>>& amap, const std::vector<std::vector<double>>& emap, const std::vector<Eigen::Vector2i>& path) {
+  if (ImPlot::BeginPlot("Map", "X", "Y")) {
+    // ImPlot::PlotHeatmap("Algae", amap.data(), ELEVATOR_GRID_SIZE, ARM_GRID_SIZE);
+    // ImPlot::PlotHeatmap("Coral", emap.data(), ELEVATOR_GRID_SIZE, ARM_GRID_SIZE);
+    ImPlot::EndPlot();
   }
-
-  return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
+
 }  // namespace visualize
+
+#endif  // VISUALIZE_HPP

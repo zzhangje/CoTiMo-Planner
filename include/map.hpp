@@ -1,8 +1,6 @@
 #ifndef MAP_HPP
 #define MAP_HPP
 
-#include <GLFW/glfw3.h>
-
 #include <Eigen/Eigen>
 #include <vector>
 
@@ -128,24 +126,6 @@ void getGridMap(ObjectType type,
     for (int rr = 0; rr < ARM_GRID_NUMS; ++rr) {
       if (map[tt][rr] < 1) {
         map[tt][rr] = 0;
-      }
-    }
-  }
-  return;
-}
-
-void getRenderMap(GLubyte* map, const std::vector<std::vector<double>>& arm_map, const std::vector<std::vector<double>>& exp_map, std::vector<Eigen::Vector2i>& path) {
-  map = new GLubyte[3 * ELEVATOR_GRID_NUMS * ARM_GRID_NUMS];
-  for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
-    for (int rr = 0; rr < ARM_GRID_NUMS; ++rr) {
-      if (arm_map[tt][rr] > config::params::OBSTACLE_OFFSET - .01) {
-        map[3 * (tt * ARM_GRID_NUMS + rr)] = 255;
-        map[3 * (tt * ARM_GRID_NUMS + rr) + 1] = 0;
-        map[3 * (tt * ARM_GRID_NUMS + rr) + 2] = 0;
-      } else {
-        map[3 * (tt * ARM_GRID_NUMS + rr)] = 0;
-        map[3 * (tt * ARM_GRID_NUMS + rr) + 1] = 0;
-        map[3 * (tt * ARM_GRID_NUMS + rr) + 2] = int(255. * exp_map[tt][rr] / config::params::OBSTACLE_OFFSET);
       }
     }
   }

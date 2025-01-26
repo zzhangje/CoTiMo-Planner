@@ -142,6 +142,9 @@ class Object {
     return false;
   }
 
+  /**
+   * @param dtheta in radian
+   */
   void transform(double dx, double dy, double dtheta) {
     std::vector<Segment> new_segments;
     double cos_theta = cos(dtheta);
@@ -163,10 +166,14 @@ class Object {
     this->theta += dtheta;
   }
 
+  /**
+   * @param dt in meter
+   * @param dr in degree
+   */
   void armTransform(double dt, double dr) {
     return this->transform(
         dt * ELEVATOR_COS_ANGLE - ELEVATOR_2_L1_FRONT,
-        dt * ELEVATOR_SIN_ANGLE + ELEVATOR_2_GROUND, dr);
+        dt * ELEVATOR_SIN_ANGLE + ELEVATOR_2_GROUND, config::toRadians(dr));
   }
 
   std::vector<Segment> getSegments() { return this->segments; }
