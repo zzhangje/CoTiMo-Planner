@@ -11,18 +11,12 @@
       "name": "grpc",
       "version>=": "1.68.2"
     },
+    "glfw3",
+    "gl3w",
+    "opengl",
     {
       "name": "protobuf",
       "version>=": "3.21.12"
-    },
-    {
-      "name": "glfw3"
-    },
-    {
-      "name": "opengl"
-    },
-    {
-      "name": "imgui"
     }
   ]
 }

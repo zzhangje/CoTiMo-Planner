@@ -18,13 +18,14 @@ find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(Threads)
 find_package(glfw3 REQUIRED)
-find_package(OpenGL REQUIRED)
-# find_package(imgui CONFIG REQUIRED)
+find_package(gl3w REQUIRED)
+find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/libs
     ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/implot
 )
 
 add_subdirectory(imgui)
@@ -44,12 +45,13 @@ file(GLOB_RECURSE HEADER_FILES
 
 add_executable(server
     src/server.cpp
+    src/implot/implot.cpp
+    src/implot/implot_items.cpp
     ${HEADER_FILES}
 )
 
 target_include_directories(server PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/proto
-    ${CMAKE_SOURCE_DIR}/imgui
 )
 
 target_link_libraries(server PRIVATE
@@ -57,7 +59,8 @@ target_link_libraries(server PRIVATE
     Eigen3::Eigen
     imgui
     glfw
-    ${OPENGL_LIBRARIES}
+    unofficial::gl3w::gl3w
+    OpenGL::GL
 )
 
 add_executable(client

@@ -1,5 +1,6 @@
 ﻿#include <GLFW/glfw3.h>
 #include <grpcpp/grpcpp.h>
+#include <implot.h>
 #include <windows.h>
 
 #include <Eigen/Eigen>
@@ -114,6 +115,7 @@ int guiRender() {
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  // ImPlot::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
   (void)io;
   ImGui::StyleColorsDark();
@@ -185,6 +187,7 @@ int guiRender() {
   // Cleanup
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
+  // ImPlot::DestroyContext();
   ImGui::DestroyContext();
 
   glfwDestroyWindow(window);
