@@ -2,7 +2,7 @@
 
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ROOT_DIR = Split-Path -Parent $SCRIPT_DIR
-$BUILD_DIR = Join-Path $ROOT_DIR "build-windows"
+$BUILD_DIR = Join-Path $ROOT_DIR "build"
 
 if (Test-Path $BUILD_DIR) {
     Write-Host "Cleaning build directory: $BUILD_DIR"

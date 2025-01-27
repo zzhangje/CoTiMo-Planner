@@ -2,7 +2,7 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
-BUILD_DIR="$ROOT_DIR/build-linux"
+BUILD_DIR="$ROOT_DIR/build"
 VCPKG_ROOT="$ROOT_DIR/vcpkg"
 
 mkdir -p "$BUILD_DIR"
