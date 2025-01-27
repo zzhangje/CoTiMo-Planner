@@ -500,7 +500,7 @@ int main(int argc, char* argv[]) {
             ImPlot::PlotLine("target", plotX, plotY, 2);
           }
         }
-        arm = Object(expType).armTransform(path[0](0), path[0](1));
+        arm = Object(expType).armTransform(path[path.size() - 1](0), path[path.size() - 1](1));
         for (Geometry::Polygon& polygon : arm.getPolygons()) {
           for (int i = 0; i < polygon.getPoints().size(); ++i) {
             Eigen::Vector2d pts1 = polygon.getPoints()[i];

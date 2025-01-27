@@ -2,6 +2,7 @@
 #define OBJECT_HPP
 
 #include <Eigen/Eigen>
+#include <cmath>
 
 #include "Polygon.hpp"
 #include "config.h"
@@ -54,7 +55,12 @@ class Object {
             Geometry::Polygon({Eigen::Vector2d(L4_UL_X, L4_UL_Y),
                                Eigen::Vector2d(L4_LL_X, L4_LL_Y),
                                Eigen::Vector2d(L4_LR_X, L4_LR_Y),
-                               Eigen::Vector2d(L4_UR_X, L4_UR_Y)})};
+                               Eigen::Vector2d(L4_UR_X, L4_UR_Y)}),
+            Geometry::Polygon({Eigen::Vector2d(L4_LL_X, L4_LL_Y),
+                               Eigen::Vector2d(L4_LR_X, L4_LR_Y),
+                               Eigen::Vector2d(BRANCH_UR_X, BRANCH_UR_Y),
+                               Eigen::Vector2d(BRANCH_UL_X, BRANCH_UL_Y)}),
+        };
         break;
       }
       case ObjectType::ARM: {
@@ -99,7 +105,7 @@ class Object {
       new_polygons.push_back(p.transform(
           Eigen::Vector2d(-ELEVATOR_2_L1_FRONT + dt * ELEVATOR_COS_ANGLE,
                           ELEVATOR_2_GROUND + dt * ELEVATOR_SIN_ANGLE),
-          dr));
+          dr / 180 * M_PI));
     }
     this->polygons = new_polygons;
     return Object(this->polygons);
