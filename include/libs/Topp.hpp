@@ -133,7 +133,6 @@ class Topp {
 
     double cost;
 
-    // auto now = std::chrono::high_resolution_clock::now();
     auto now = std::chrono::steady_clock::now();
     auto lastMillis = std::chrono::duration_cast<std::chrono::milliseconds>(
                           now.time_since_epoch())

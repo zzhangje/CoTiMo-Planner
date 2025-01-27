@@ -114,6 +114,16 @@ class Object {
   void getPolygons(std::vector<Geometry::Polygon>& polygons) {
     polygons = this->polygons;
   }
+
+  double distanceToObject(Object object) {
+    double result = INFINITY;
+    for (Geometry::Polygon p1 : this->polygons) {
+      for (Geometry::Polygon p2 : object.polygons) {
+        result = std::min(result, p1.distanceToPolygon(p2));
+      }
+    }
+    return result;
+  }
 };
 
 #endif  // OBJECT_HPP
