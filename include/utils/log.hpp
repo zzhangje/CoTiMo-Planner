@@ -8,12 +8,10 @@
 #ifndef LOG_HPP
 #define LOG_HPP
 
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <time.h>
-#include <windows.h>
-
+#include <cstdarg>
+#include <cstdio>
+#include <ctime>
+#include <cstdlib>
 #include <iostream>
 
 #include "config.h"
@@ -22,6 +20,8 @@
 #define MAX_CALLBACKS 32
 #define LOG_USE_COLOR
 
+#ifdef _WIN32
+#include <windows.h>
 void showConsole() {
   DWORD processId = GetCurrentProcessId();
   HWND hwnd = GetConsoleWindow();
@@ -31,6 +31,10 @@ void showConsole() {
   }
   ShowWindow(hwnd, SW_SHOW);
 }
+#else
+void showConsole() {
+}
+#endif
 
 typedef struct {
   va_list ap;

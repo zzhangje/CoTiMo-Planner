@@ -8,6 +8,8 @@ VCPKG_ROOT="$ROOT_DIR/vcpkg"
 mkdir -p "$BUILD_DIR"
 mkdir -p "$VCPKG_ROOT"
 
+sudo apt-get install -y cmake ninja-build build-essential libgl1-mesa-dev xorg-dev pkg-config 
+
 if [ ! -f "$VCPKG_ROOT/vcpkg" ]; then
     echo "Installing vcpkg..."
     git clone https://github.com/Microsoft/vcpkg.git "$VCPKG_ROOT"
