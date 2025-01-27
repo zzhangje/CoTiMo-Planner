@@ -53,8 +53,8 @@ class Object {
                               false),
             Geometry::Polygon({Eigen::Vector2d(L4_UL_X, L4_UL_Y),
                                Eigen::Vector2d(L4_LL_X, L4_LL_Y),
-                               Eigen::Vector2d(BRANCH_LL_X, BRANCH_LL_Y),
-                               Eigen::Vector2d(BRANCH_UL_X, BRANCH_UL_Y)})};
+                               Eigen::Vector2d(L4_LR_X, L4_LR_Y),
+                               Eigen::Vector2d(L4_UR_X, L4_UR_Y)})};
         break;
       }
       case ObjectType::ARM: {
