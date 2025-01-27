@@ -34,7 +34,7 @@ class Object {
             Polygon(
                 {Eigen::Vector2d(-ROBOT_2_L1_FRONT, ROBOT_HEIGHT),
                  Eigen::Vector2d(-ROBOT_2_L1_FRONT - ROBOT_WIDTH, ROBOT_HEIGHT),
-                 Eigen::Vector2d(-Robot_2_L1_FRONT - ROBOT_WIDTH, 0),
+                 Eigen::Vector2d(-ROBOT_2_L1_FRONT - ROBOT_WIDTH, 0),
                  Eigen::Vector2d(-ROBOT_2_L1_FRONT, 0)}),
             Polygon({Eigen::Vector2d(0, 0), Eigen::Vector2d(0, L1_FRONT_HEIGHT),
                      Eigen::Vector2d(L1_FRONT_2_L1_BACK, L1_BACK_HEIGHT),
@@ -59,20 +59,21 @@ class Object {
       case ObjectType::ARM: {
         this->polygons = std::vector<Polygon>{
             Polygon({Eigen::Vector2d(-.2, .05), Eigen::Vector2d(.2, .05),
-                     Eigen::Vector2d(.2, -.05), Eigen::Vector2d(-.2, -.05)}),
-            false};
+                     Eigen::Vector2d(.2, -.05), Eigen::Vector2d(-.2, -.05)},
+                    false)};
         break;
       }
       case ObjectType::ARM_EXP: {
         this->polygons = std::vector<Polygon>{
             Polygon({Eigen::Vector2d(-.25, .05), Eigen::Vector2d(.25, .05),
-                     Eigen::Vector2d(.25, -.05), Eigen::Vector2d(-.25, -.05)}),
-            false};
-      }; break;
-    }
-    default: {
-      this->polygons = std::vector<Polygon>{};
-      break;
+                     Eigen::Vector2d(.25, -.05), Eigen::Vector2d(-.25, -.05)},
+                    false)};
+        break;
+      }
+      default: {
+        this->polygons = std::vector<Polygon>{};
+        break;
+      }
     }
   }
 

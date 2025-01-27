@@ -32,7 +32,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/include/implot
     ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui
-    ${CMAKE_CURRENT_SOURCE_DIR}/glew/include
 )
 
 add_library(trajectory_native_proto proto/ArmTrajectoryService.proto)
