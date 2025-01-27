@@ -20,18 +20,13 @@ find_package(Threads)
 find_package(glfw3 REQUIRED)
 find_package(gl3w REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS OpenGL)
-
-add_subdirectory(
-    dependencies/imgui
-    # glew
-)
+find_package(imgui CONFIG REQUIRED)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/include/libs
     ${CMAKE_CURRENT_SOURCE_DIR}/include/utils
     ${CMAKE_CURRENT_SOURCE_DIR}/include/implot
-    ${CMAKE_CURRENT_SOURCE_DIR}/dependencies/imgui
 )
 
 add_library(trajectory_native_proto proto/ArmTrajectoryService.proto)
@@ -47,12 +42,21 @@ file(GLOB_RECURSE HEADER_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
 
-add_executable(server WIN32
-    src/server.cpp
-    src/implot/implot.cpp
-    src/implot/implot_items.cpp
-    ${HEADER_FILES}
-)
+if(WIN32)
+    add_executable(server WIN32
+        src/server.cpp
+        src/implot/implot.cpp
+        src/implot/implot_items.cpp
+        ${HEADER_FILES}
+    )
+else()
+    add_executable(server
+        src/server.cpp
+        src/implot/implot.cpp
+        src/implot/implot_items.cpp
+        ${HEADER_FILES}
+    )
+endif()
 
 target_include_directories(server PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/proto
@@ -61,16 +65,17 @@ target_include_directories(server PRIVATE
 target_link_libraries(server PRIVATE
     trajectory_native_proto
     Eigen3::Eigen
-    imgui
-    # glew
+    imgui::imgui
     glfw
     unofficial::gl3w::gl3w
     OpenGL::GL
 )
 
-set_target_properties(server PROPERTIES
-    LINK_FLAGS "/SUBSYSTEM:WINDOWS"
-)
+if(WIN32)
+    set_target_properties(server PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS"
+    )
+endif()
 
 add_executable(client
     src/client.cpp

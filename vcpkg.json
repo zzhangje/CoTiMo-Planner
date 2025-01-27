@@ -3,20 +3,15 @@
   "version": "0.1.0",
   "builtin-baseline": "4eeb300260f6c8773f6c0827cb9409b9181e120e",
   "dependencies": [
-    {
-      "name": "eigen3",
-      "version>=": "3.4.0"
-    },
-    {
-      "name": "grpc",
-      "version>=": "1.68.2"
-    },
+    "eigen3",
+    "grpc",
     "glfw3",
     "gl3w",
     "opengl",
     {
-      "name": "protobuf",
-      "version>=": "3.21.12"
-    }
+      "name": "imgui",
+      "features": ["docking-experimental", "glfw-binding", "opengl3-binding"]
+    },
+    "protobuf"
   ]
 }

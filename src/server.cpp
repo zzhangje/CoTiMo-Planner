@@ -2,13 +2,13 @@
 #include <GLFW/glfw3.h>
 #include <grpcpp/grpcpp.h>
 #include <implot.h>
-#include <windows.h>
 
 #include <Eigen/Eigen>
 #include <atomic>
 #include <chrono>
 #include <mutex>
 #include <thread>
+#include <iostream>
 
 #include "Object.hpp"
 #include "Topp.hpp"
@@ -147,8 +147,11 @@ void RunGrpcServer() {
   log_info("Server is shutting down.");
 }
 
-// main thread
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+void ShowError(const char* message) {
+    std::cerr << "Error: " << message << std::endl;
+}
+
+int main(int argc, char* argv[]) {
   // redirect stdout
   RedirectStdout();
   log_set_quiet(false);
@@ -219,7 +222,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
   // main loop
   while (!glfwWindowShouldClose(window)) {
     if (!serverThread.joinable()) {
-      MessageBox(NULL, "Server thread is not joinable!", "Error!", MB_OK | MB_ICONERROR);
+      ShowError("Server thread is not joinable!");
     }
 
     // start the frame

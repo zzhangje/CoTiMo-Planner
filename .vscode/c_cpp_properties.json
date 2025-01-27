@@ -26,16 +26,15 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/include",
-                "${workspaceFolder}/include/libs",
-                "${workspaceFolder}/include/utils",
-                "${workspaceFolder}/build/proto",
-                "/usr/include",
-                "/usr/local/include"
+                "${workspaceFolder}/include/**",
+                "${workspaceFolder}/build-linux/vcpkg_installed/x64-linux/include/**",
+                "/usr/include/**",
+                "/usr/local/include/**"
             ],
             "defines": [],
+            "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
-            "cppStandard": "gnu++17",
+            "cppStandard": "c++20",
             "intelliSenseMode": "linux-gcc-x64"
         }
     ],
