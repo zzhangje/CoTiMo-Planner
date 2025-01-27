@@ -65,6 +65,18 @@ void CompatibleFreeConsole() {
 #endif
 }
 
+void CompatibleAllocConsole() {
+#ifdef _WIN32
+  AllocConsole();
+#else
+  int fd = open("/dev/tty", O_RDWR);
+  dup2(fd, STDIN_FILENO);
+  dup2(fd, STDOUT_FILENO);
+  dup2(fd, STDERR_FILENO);
+  close(fd);
+#endif
+}
+
 struct ImGuiMessage {
   ImVec4 color;
   char* level;
@@ -138,7 +150,7 @@ class Service final : public ArmTrajectoryService::Service {
     }
 
     // find the path in the grid map
-    std::vector<std::vector<double>> grid;
+    std::vector<std::vector<bool>> grid;
     getGridMap(expType, grid);
     std::vector<Eigen::Vector2i> path, visited, sampledPath;
     if (!astar::astar(grid, startGridIdx, endGridIdx, path, visited)) {
@@ -262,9 +274,10 @@ int main(int argc, char* argv[]) {
   // thread variables copy
   ArmTrajectory trajectory;
 
-  std::vector<std::vector<double>> emap, amap;
+  std::vector<std::vector<bool>> emap, amap;
   std::vector<Eigen::Vector2d> path;
-  ObjectType armType, expType;
+  ObjectType armType = ObjectType::ARM;
+  ObjectType expType = ObjectType::ARM_EXP;
   double simT = 0, simR = 0;
   int simIndex = 0;
   auto simStart = std::chrono::high_resolution_clock::now();
@@ -350,8 +363,8 @@ int main(int argc, char* argv[]) {
       ImGui::PopStyleColor();
       ImGui::Text(message.message);
     }
+    // hang the scroll bar at the bottom
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-      // hang the scroll bar at the bottom
       ImGui::SetScrollHereY(1.0f);
     }
     ImGui::EndChild();
@@ -368,11 +381,11 @@ int main(int argc, char* argv[]) {
       std::vector<double> obsX, obsY, expX, expY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
-          if (amap[t][r] > OBSTACLE_OFFSET - .01) {
+          if (amap[t][r]) {
             Eigen::Vector2d tr = getTR(t, r);
             obsX.push_back(tr(0));
             obsY.push_back(tr(1));
-          } else if (emap[t][r] > OBSTACLE_OFFSET - .01) {
+          } else if (emap[t][r]) {
             Eigen::Vector2d tr = getTR(t, r);
             expX.push_back(tr(0));
             expY.push_back(tr(1));

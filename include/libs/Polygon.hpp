@@ -76,17 +76,53 @@ class Polygon {
   }
 
   bool isPolygonIntersect(Polygon poly) {
+    // check if the two polygons intersect
     for (int i = 0; i < this->points.size(); i++) {
-      if (poly.isPointInside(this->points[i])) {
-        return true;
+      Eigen::Vector2d p1 = this->points[i];
+      Eigen::Vector2d p2 = this->points[(i + 1) % this->points.size()];
+      for (int j = 0; j < poly.points.size(); j++) {
+        Eigen::Vector2d q1 = poly.points[j];
+        Eigen::Vector2d q2 = poly.points[(j + 1) % poly.points.size()];
+        double d = (p1.x() - p2.x()) * (q1.y() - q2.y()) -
+                   (p1.y() - p2.y()) * (q1.x() - q2.x());
+        if (d == 0) {
+          continue;
+        }
+        double t = ((p1.x() - q1.x()) * (q1.y() - q2.y()) -
+                    (p1.y() - q1.y()) * (q1.x() - q2.x())) /
+                   d;
+        double u = -((p1.x() - p2.x()) * (p1.y() - q1.y()) -
+                     (p1.y() - p2.y()) * (p1.x() - q1.x())) /
+                   d;
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+          return true;
+        }
       }
     }
-    for (int i = 0; i < poly.points.size(); i++) {
-      if (this->isPointInside(poly.points[i])) {
-        return true;
+    // check if one polygon is inside the other
+    bool inside = true;
+    for (Eigen::Vector2d p : this->points) {
+      if (!poly.isPointInside(p)) {
+        inside = false;
+        break;
       }
     }
-    return false;
+    if (inside) {
+      return true;
+    }
+    for (Eigen::Vector2d p : poly.points) {
+      if (!this->isPointInside(p)) {
+        return false;
+      }
+    }
+    inside = true;
+    for (Eigen::Vector2d p : poly.points) {
+      if (!this->isPointInside(p)) {
+        inside = false;
+        break;
+      }
+    }
+    return inside;
   }
 
   double distanceToPoint(Eigen::Vector2d p) {
@@ -117,6 +153,7 @@ class Polygon {
     if (this->isPolygonIntersect(poly)) {
       // ND problem cannot be solved properly
       // we use an approximate solution
+      // this may be better than the one in report in fact
       double result = INFINITY;
       for (int i = 0; i < n1; i++) {
         if (poly.isPointInside(this->points[i])) {

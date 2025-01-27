@@ -72,8 +72,8 @@ class Object {
       }
       case ObjectType::ARM_EXP: {
         this->polygons = std::vector<Geometry::Polygon>{
-            Geometry::Polygon({Eigen::Vector2d(-.25, .05), Eigen::Vector2d(.25, .05),
-                               Eigen::Vector2d(.25, -.05), Eigen::Vector2d(-.25, -.05)},
+            Geometry::Polygon({Eigen::Vector2d(-.25, .1), Eigen::Vector2d(.25, .1),
+                               Eigen::Vector2d(.25, -.1), Eigen::Vector2d(-.25, -.1)},
                               false)};
         break;
       }
@@ -107,8 +107,7 @@ class Object {
                           ELEVATOR_2_GROUND + dt * ELEVATOR_SIN_ANGLE),
           dr / 180 * M_PI));
     }
-    this->polygons = new_polygons;
-    return Object(this->polygons);
+    return Object(new_polygons);
   }
 
   std::vector<Geometry::Polygon> getPolygons() { return this->polygons; }
