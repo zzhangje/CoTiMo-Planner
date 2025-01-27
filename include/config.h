@@ -6,20 +6,23 @@
 
 namespace config {
 
-constexpr double toRadians(double degree) {
-  return degree / 180 * M_PI;
-}
+constexpr double toRadians(double degree) { return degree / 180 * M_PI; }
 
-constexpr double toDegrees(double radian) {
-  return radian / M_PI * 180;
-}
+constexpr double toDegrees(double radian) { return radian / M_PI * 180; }
 
 constexpr double constexprCos(double x) {
-  return 1 - x * x / 2 + x * x * x * x / 24 - x * x * x * x * x * x / 720 + x * x * x * x * x * x * x * x / 40320 - x * x * x * x * x * x * x * x * x * x / 3628800 + x * x * x * x * x * x * x * x * x * x * x * x / 479001600;
+  return 1 - x * x / 2 + x * x * x * x / 24 - x * x * x * x * x * x / 720 +
+         x * x * x * x * x * x * x * x / 40320 -
+         x * x * x * x * x * x * x * x * x * x / 3628800 +
+         x * x * x * x * x * x * x * x * x * x * x * x / 479001600;
 }
 
 constexpr double constexprSin(double x) {
-  return x - x * x * x / 6 + x * x * x * x * x / 120 - x * x * x * x * x * x * x / 5040 + x * x * x * x * x * x * x * x * x / 362880 - x * x * x * x * x * x * x * x * x * x * x / 39916800 + x * x * x * x * x * x * x * x * x * x * x * x * x / 6227020800;
+  return x - x * x * x / 6 + x * x * x * x * x / 120 -
+         x * x * x * x * x * x * x / 5040 +
+         x * x * x * x * x * x * x * x * x / 362880 -
+         x * x * x * x * x * x * x * x * x * x * x / 39916800 +
+         x * x * x * x * x * x * x * x * x * x * x * x * x / 6227020800;
 }
 
 constexpr int constexprFloor(double x) {
@@ -27,27 +30,32 @@ constexpr int constexprFloor(double x) {
 }
 
 namespace params {
-constexpr double OBSTACLE_OFFSET = 100.0;
-constexpr double OBSTACLE_FIELD_REDUCTION = 0.3;
-constexpr double ASTAR_HEURISTIC_COEFFICIENT = 1.0;
 const std::string GRPC_PORT = "58214";
 const bool IS_DEBUG = true;
 }  // namespace params
 
 namespace alphabot {
-const std::string ROBOT_PARAMS_VERSION = "8214.0.0";  // for cache version control
+const std::string ROBOT_PARAMS_VERSION =
+    "8214.0.0";  // for cache version control
 
 // the prohitbit area of the drivetrain
-constexpr double ROBOT_WIDTH = 0.7;        // the width of the prohitbit area
-constexpr double ROBOT_HEIGHT = 0.2;       // the height of the prohitbit area to the ground
-constexpr double ROBOT_2_L1_FRONT = 0.05;  // the distance from the prohitbit area to the front of the reef
+constexpr double ROBOT_WIDTH = 0.7;  // the width of the prohitbit area
+constexpr double ROBOT_HEIGHT =
+    0.2;  // the height of the prohitbit area to the ground
+constexpr double ROBOT_2_L1_FRONT =
+    0.05;  // the distance from the prohitbit area to the front of the reef
 
 // the properties of the elevator
-constexpr double ELEVATOR_2_L1_FRONT = 0.4;       // the distance from the elevator to the front of the reef
-constexpr double ELEVATOR_2_GROUND = 0.2;         // the distance from the elevator to the ground
-constexpr double ELEVATOR_2_GROUND_ANGLE = 80.0;  // the angle from the elevator to the ground
-constexpr double ELEVATOR_SIN_ANGLE = constexprSin(toRadians(ELEVATOR_2_GROUND_ANGLE));
-constexpr double ELEVATOR_COS_ANGLE = constexprCos(toRadians(ELEVATOR_2_GROUND_ANGLE));
+constexpr double ELEVATOR_2_L1_FRONT =
+    0.4;  // the distance from the elevator to the front of the reef
+constexpr double ELEVATOR_2_GROUND =
+    0.2;  // the distance from the elevator to the ground
+constexpr double ELEVATOR_2_GROUND_ANGLE =
+    80.0;  // the angle from the elevator to the ground
+constexpr double ELEVATOR_SIN_ANGLE =
+    constexprSin(toRadians(ELEVATOR_2_GROUND_ANGLE));
+constexpr double ELEVATOR_COS_ANGLE =
+    constexprCos(toRadians(ELEVATOR_2_GROUND_ANGLE));
 constexpr double ELEVATOR_MIN_POSITION_METER = 0;
 constexpr double ELEVATOR_MAX_POSITION_METER = 2.0;
 constexpr double ARM_MIN_THETA_DEGREE = 0;
@@ -73,8 +81,10 @@ constexpr double ARM_ROUNDS_2_DEGREE = 360.0;
 
 // the limit of the motor
 constexpr double ELEVATOR_MAX_VOLTAGE = 12;
-constexpr double ELEVATOR_VMAX = ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
-constexpr double ELEVATOR_AMAX = ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
+constexpr double ELEVATOR_VMAX =
+    ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
+constexpr double ELEVATOR_AMAX =
+    ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
 constexpr double ARM_MAX_VOLTAGE = 12;
 constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
 constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
@@ -82,8 +92,14 @@ constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
 // the properties of the grid map
 constexpr double ELEVATOR_GRID_SIZE = .01;
 constexpr double ARM_GRID_SIZE = 2.;
-constexpr int ELEVATOR_GRID_NUMS = constexprFloor((ELEVATOR_MAX_POSITION_METER - ELEVATOR_MIN_POSITION_METER) / ELEVATOR_GRID_SIZE) + 1;
-constexpr int ARM_GRID_NUMS = constexprFloor((ARM_MAX_THETA_DEGREE - ARM_MIN_THETA_DEGREE) / ARM_GRID_SIZE) + 1;
+constexpr int ELEVATOR_GRID_NUMS =
+    constexprFloor((ELEVATOR_MAX_POSITION_METER - ELEVATOR_MIN_POSITION_METER) /
+                   ELEVATOR_GRID_SIZE) +
+    1;
+constexpr int ARM_GRID_NUMS =
+    constexprFloor((ARM_MAX_THETA_DEGREE - ARM_MIN_THETA_DEGREE) /
+                   ARM_GRID_SIZE) +
+    1;
 };  // namespace alphabot
 
 namespace env {

@@ -15,6 +15,7 @@
 #include <thread>
 
 #include "Object.hpp"
+#include "Polygon.hpp"
 #include "Topp.hpp"
 #include "astar.hpp"
 #include "config.h"
@@ -264,7 +265,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::vector<double>> emap, amap;
   std::vector<Eigen::Vector2d> path;
   ObjectType armType, expType;
-  double t = 0, r = 0;
+  double simT = 0, simR = 0;
   int simIndex = 0;
   auto simStart = std::chrono::high_resolution_clock::now();
 
@@ -324,10 +325,10 @@ int main(int argc, char* argv[]) {
       }
       double dt = simTime - trajectory.states(simIndex).timestamp();
       double factor = dt / (trajectory.states(simIndex + 1).timestamp() - trajectory.states(simIndex).timestamp());
-      t = trajectory.states(simIndex).position().shoulderheightmeter() * (1 - factor) +
-          trajectory.states(simIndex + 1).position().shoulderheightmeter() * factor;
-      r = trajectory.states(simIndex).position().elbowpositiondegree() * (1 - factor) +
-          trajectory.states(simIndex + 1).position().elbowpositiondegree() * factor;
+      simT = trajectory.states(simIndex).position().shoulderheightmeter() * (1 - factor) +
+             trajectory.states(simIndex + 1).position().shoulderheightmeter() * factor;
+      simR = trajectory.states(simIndex).position().elbowpositiondegree() * (1 - factor) +
+             trajectory.states(simIndex + 1).position().elbowpositiondegree() * factor;
     }
 
     // handle console output
@@ -367,11 +368,11 @@ int main(int argc, char* argv[]) {
       std::vector<double> obsX, obsY, expX, expY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
-          if (amap[t][r] > config::params::OBSTACLE_OFFSET - .01) {
+          if (amap[t][r] > OBSTACLE_OFFSET - .01) {
             Eigen::Vector2d tr = getTR(t, r);
             obsX.push_back(tr(0));
             obsY.push_back(tr(1));
-          } else if (emap[t][r] > config::params::OBSTACLE_OFFSET - .01) {
+          } else if (emap[t][r] > OBSTACLE_OFFSET - .01) {
             Eigen::Vector2d tr = getTR(t, r);
             expX.push_back(tr(0));
             expY.push_back(tr(1));
@@ -389,8 +390,8 @@ int main(int argc, char* argv[]) {
       }
       ImPlot::PlotLine("trajectory", trajX, trajY, path.size());
 
-      double currentX[] = {t};
-      double currentY[] = {r};
+      double currentX[] = {simT};
+      double currentY[] = {simR};
       ImPlot::PlotScatter("current", currentX, currentY, 1);
       ImPlot::EndPlot();
     }
@@ -459,35 +460,55 @@ int main(int argc, char* argv[]) {
     ImGui::Begin("2D Projection");
     if (ImPlot::BeginPlot("2D Projection", "X", "Z")) {
       Object env = Object(ObjectType::ENV);
-      for (int i = 0; i < env.getSegments().size(); ++i) {
-        double plotX[2] = {env.getSegments()[i].getPts1X(), env.getSegments()[i].getPts2X()};
-        double plotY[2] = {env.getSegments()[i].getPts1Y(), env.getSegments()[i].getPts2Y()};
-        ImPlot::PlotLine("obstacle", plotX, plotY, 2);
+      Object arm = Object(armType).armTransform(simT, simR);
+      Object exp = Object(expType).armTransform(simT, simR);
+      for (Geometry::Polygon& polygon : env.getPolygons()) {
+        for (int i = 0; i < polygon.getPoints().size(); ++i) {
+          Eigen::Vector2d pts1 = polygon.getPoints()[i];
+          Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
+          double plotX[2] = {pts1(0), pts2(0)};
+          double plotY[2] = {pts1(1), pts2(1)};
+          ImPlot::PlotLine("obstacle", plotX, plotY, 2);
+        }
       }
-      Object arm = Object(armType, t, r);
-      for (int i = 0; i < arm.getSegments().size(); ++i) {
-        double plotX[2] = {arm.getSegments()[i].getPts1X(), arm.getSegments()[i].getPts2X()};
-        double plotY[2] = {arm.getSegments()[i].getPts1Y(), arm.getSegments()[i].getPts2Y()};
-        ImPlot::PlotLine("arm", plotX, plotY, 2);
+      for (Geometry::Polygon& polygon : arm.getPolygons()) {
+        for (int i = 0; i < polygon.getPoints().size(); ++i) {
+          Eigen::Vector2d pts1 = polygon.getPoints()[i];
+          Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
+          double plotX[2] = {pts1(0), pts2(0)};
+          double plotY[2] = {pts1(1), pts2(1)};
+          ImPlot::PlotLine("arm", plotX, plotY, 2);
+        }
       }
-      Object exp = Object(expType, t, r);
-      for (int i = 0; i < exp.getSegments().size(); ++i) {
-        double plotX[2] = {exp.getSegments()[i].getPts1X(), exp.getSegments()[i].getPts2X()};
-        double plotY[2] = {exp.getSegments()[i].getPts1Y(), exp.getSegments()[i].getPts2Y()};
-        ImPlot::PlotLine("expanded arm", plotX, plotY, 2);
+      for (Geometry::Polygon& polygon : exp.getPolygons()) {
+        for (int i = 0; i < polygon.getPoints().size(); ++i) {
+          Eigen::Vector2d pts1 = polygon.getPoints()[i];
+          Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
+          double plotX[2] = {pts1(0), pts2(0)};
+          double plotY[2] = {pts1(1), pts2(1)};
+          ImPlot::PlotLine("expanded", plotX, plotY, 2);
+        }
       }
       if (path.size() > 0) {
-        arm = Object(armType, path[0].x(), path[0].y());
-        for (int i = 0; i < arm.getSegments().size(); ++i) {
-          double plotX[2] = {arm.getSegments()[i].getPts1X(), arm.getSegments()[i].getPts2X()};
-          double plotY[2] = {arm.getSegments()[i].getPts1Y(), arm.getSegments()[i].getPts2Y()};
-          ImPlot::PlotLine("target", plotX, plotY, 2);
+        arm = Object(armType).armTransform(path[0](0), path[0](1));
+        for (Geometry::Polygon& polygon : arm.getPolygons()) {
+          for (int i = 0; i < polygon.getPoints().size(); ++i) {
+            Eigen::Vector2d pts1 = polygon.getPoints()[i];
+            Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
+            double plotX[2] = {pts1(0), pts2(0)};
+            double plotY[2] = {pts1(1), pts2(1)};
+            ImPlot::PlotLine("target", plotX, plotY, 2);
+          }
         }
-        arm = Object(armType, path[path.size() - 1].x(), path[path.size() - 1].y());
-        for (int i = 0; i < arm.getSegments().size(); ++i) {
-          double plotX[2] = {arm.getSegments()[i].getPts1X(), arm.getSegments()[i].getPts2X()};
-          double plotY[2] = {arm.getSegments()[i].getPts1Y(), arm.getSegments()[i].getPts2Y()};
-          ImPlot::PlotLine("target", plotX, plotY, 2);
+        arm = Object(expType).armTransform(path[0](0), path[0](1));
+        for (Geometry::Polygon& polygon : arm.getPolygons()) {
+          for (int i = 0; i < polygon.getPoints().size(); ++i) {
+            Eigen::Vector2d pts1 = polygon.getPoints()[i];
+            Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
+            double plotX[2] = {pts1(0), pts2(0)};
+            double plotY[2] = {pts1(1), pts2(1)};
+            ImPlot::PlotLine("target", plotX, plotY, 2);
+          }
         }
       }
       std::vector<double> elevatorX = {-ELEVATOR_2_L1_FRONT + ELEVATOR_MIN_POSITION_METER * ELEVATOR_COS_ANGLE, -ELEVATOR_2_L1_FRONT + ELEVATOR_MAX_POSITION_METER * ELEVATOR_COS_ANGLE};
