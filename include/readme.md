@@ -1,17 +1,12 @@
-### Math Utils:
+## Libs & Utils Class
 
-- `lbfgs.hpp`: Use L-BFGS Method to solve unconstrained optimized problem, https://github.com/ZJU-FAST-Lab/LBFGS-Lite
-- `sdqp.hpp`: Use SDQP Method to solve low dimensional linear inequality constraints quadratically optimization problem, https://github.com/ZJU-FAST-Lab/SDQP
-- `astar.hpp`: A* path finding
-- `spline.hpp`: obtain the params of a spline by given points
-- `Topp.hpp`: form trajectory planning problem to PHR Augumented Lagrangian Relaxation form, and solve it with L-BFGS
-- `Smooth.hpp`: form path optimization problem to unconstrained optimization form and solve it with L-BFGS
-
-### System Utils:
-
-- `log.hpp`, https://github.com/rxi/log.c
-
-### Object Class:
-
-- `Polygon.hpp`: define some basic properties for polygon object
-- `Object.hpp`: every object can be formed by finite number of polygons. environment obstacles, arm, and expanded arm are all objects.
+| Type | File | Description | Reference |
+| :-: | :-: | - | - |
+| Object | [libs/Polygon.hpp](libs/Polygon.hpp) | Define the basic properties of a polygon:<br>`isPointInside`, `isPolygonIntersect`, `distanceToPoint`, `distanceToPolygon` | |
+| Object | [libs/Object.hpp](libs/Object.hpp) | Any object (environment obstacle, arm) can be represented as a finite set of convex polygons  | |
+| Task | [libs/Smooth.hpp](libs/Smooth.hpp) | Establish an unconstrained optimization problem under the Lipschitz continuous artificial potential field to minimize stretch energy | |
+| Task | [libs/Topp.hpp](libs/Topp.hpp) | Relax the time-optimal parameterization problem of kinematic constraints into a PHR Augumented Lagrangian optimization problem  | |
+| Math Util | [libs/lbfgs.hpp](libs/lbfgs.hpp) | Solve unconstrained optimization problem with L-BFGS algorithm | https://github.com/ZJU-FAST-Lab/LBFGS-Lite |
+| Math Util | [libs/sdqp.hpp](libs/sdqp.hpp) | Solve linear inequality constrained quadratically optimization problem with LDQP algorithm | https://github.com/ZJU-FAST-Lab/SDQP |
+| Math Util | [libs/spline.hpp](libs/spline.hpp) | Given a series of points, calculate the polynomial curve of the specified order | |
+| System Util | [utils/log.hpp](utils/log.hpp) | | https://github.com/rxi/log.c |
