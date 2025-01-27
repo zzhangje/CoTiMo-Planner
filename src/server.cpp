@@ -13,6 +13,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <iostream>
 
 #include "Object.hpp"
 #include "Polygon.hpp"
@@ -211,7 +212,7 @@ void RunGrpcServer() {
 int main(int argc, char* argv[]) {
   // free console
   CompatibleFreeConsole();
-
+  
   log_set_quiet(false);
   ShowInfo("Welcome to Cyber Planner 2025");
   log_info(
@@ -471,7 +472,7 @@ int main(int argc, char* argv[]) {
      * Window 4: 2D Projection
      */
     ImGui::Begin("2D Projection");
-    if (ImPlot::BeginPlot("2D Projection", "X", "Z")) {
+    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)")) {
       Object env = Object(ObjectType::ENV);
       Object arm = Object(armType).armTransform(simT, simR);
       Object exp = Object(expType).armTransform(simT, simR);
@@ -521,7 +522,6 @@ int main(int argc, char* argv[]) {
             double plotX[2] = {pts1(0), pts2(0)};
             double plotY[2] = {pts1(1), pts2(1)};
             ImPlot::PlotLine("target", plotX, plotY, 2);
-          }
         }
       }
       std::vector<double> elevatorX = {-ELEVATOR_2_L1_FRONT + ELEVATOR_MIN_POSITION_METER * ELEVATOR_COS_ANGLE, -ELEVATOR_2_L1_FRONT + ELEVATOR_MAX_POSITION_METER * ELEVATOR_COS_ANGLE};

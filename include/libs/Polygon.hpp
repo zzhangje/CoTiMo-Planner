@@ -186,7 +186,6 @@ class Polygon {
   void getPoints(std::vector<Eigen::Vector2d>& points) {
     points = this->points;
   }
-
   std::vector<Eigen::Vector2d> getPoints() { return this->points; }
 
   void getLinearSystem(Eigen::MatrixX2d& A, Eigen::VectorXd& b) {
@@ -194,6 +193,6 @@ class Polygon {
     b = this->b;
   }
 };
-}  // namespace Geometry
+};  // namespace Geometry
 
 #endif  // POLYGON_HPP
