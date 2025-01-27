@@ -9,6 +9,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <iostream>
 
 #include "Object.hpp"
 #include "Topp.hpp"
@@ -113,7 +114,7 @@ class Service final : public ArmTrajectoryService::Service {
     }
 
     // find the path in the grid map
-    std::vector<std::vector<double>> grid;
+    std::vector<std::vector<bool>> grid;
     getGridMap(expType, grid);
     std::vector<Eigen::Vector2i> path, visited, sampledPath;
     if (!astar::astar(grid, startGridIdx, endGridIdx, path, visited)) {
@@ -173,7 +174,7 @@ void ShowError(const char* message) {
 int main(int argc, char* argv[]) {
   // free console
   CompatibleFreeConsole();
-
+  
   // redirect stdout
   RedirectStdout();
   log_set_quiet(false);
@@ -234,7 +235,7 @@ int main(int argc, char* argv[]) {
   // thread variables copy
   ArmTrajectory trajectory;
 
-  std::vector<std::vector<double>> emap, amap;
+  std::vector<std::vector<bool>> emap, amap;
   std::vector<Eigen::Vector2d> path;
   ObjectType armType, expType;
   double t = 0, r = 0;
@@ -338,11 +339,11 @@ int main(int argc, char* argv[]) {
       std::vector<double> obsX, obsY, expX, expY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
-          if (amap[t][r] > config::params::OBSTACLE_OFFSET - .01) {
+          if (amap[t][r]) {
             Eigen::Vector2d tr = getTR(t, r);
             obsX.push_back(tr(0));
             obsY.push_back(tr(1));
-          } else if (emap[t][r] > config::params::OBSTACLE_OFFSET - .01) {
+          } else if (emap[t][r]) {
             Eigen::Vector2d tr = getTR(t, r);
             expX.push_back(tr(0));
             expY.push_back(tr(1));
@@ -428,24 +429,36 @@ int main(int argc, char* argv[]) {
      * Window 4: 2D Projection
      */
     ImGui::Begin("2D Projection");
-    if (ImPlot::BeginPlot("2D Projection", "X", "Z")) {
+    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)")) {
       Object env = Object(ObjectType::ENV);
-      for (int i = 0; i < env.getSegments().size(); ++i) {
-        double plotX[2] = {env.getSegments()[i].getPts1X(), env.getSegments()[i].getPts2X()};
-        double plotY[2] = {env.getSegments()[i].getPts1Y(), env.getSegments()[i].getPts2Y()};
-        ImPlot::PlotLine("obstacle", plotX, plotY, 2);
+      for (int i = 0; i < env.getPolygons().size(); ++i) {
+        for (int j = 0; j < env.getPolygons()[i].size(); ++j) {
+          Eigen::Vector2d pt1 = env.getPolygons()[i].getPoints()[j];
+          Eigen::Vector2d pt2 = env.getPolygons()[i].getPoints()[(j + 1) % env.getPolygons()[i].size()];
+          double plotX[2] = {pt1.x(), pt2.x()};
+          double plotY[2] = {pt1.y(), pt2.y()};
+          ImPlot::PlotLine("env", plotX, plotY, 2);
+        }
       }
       Object arm = Object(armType, t, r);
-      for (int i = 0; i < arm.getSegments().size(); ++i) {
-        double plotX[2] = {arm.getSegments()[i].getPts1X(), arm.getSegments()[i].getPts2X()};
-        double plotY[2] = {arm.getSegments()[i].getPts1Y(), arm.getSegments()[i].getPts2Y()};
-        ImPlot::PlotLine("arm", plotX, plotY, 2);
+      for (int i = 0; i < arm.getPolygons().size(); ++i) {
+        for (int j = 0; j < arm.getPolygons()[i].size(); ++j) {
+          Eigen::Vector2d pt1 = arm.getPolygons()[i].getPoints()[j];
+          Eigen::Vector2d pt2 = arm.getPolygons()[i].getPoints()[(j + 1) % arm.getPolygons()[i].size()];
+          double plotX[2] = {pt1.x(), pt2.x()};
+          double plotY[2] = {pt1.y(), pt2.y()};
+          ImPlot::PlotLine("arm", plotX, plotY, 2);
+        }
       }
       Object exp = Object(expType, t, r);
-      for (int i = 0; i < exp.getSegments().size(); ++i) {
-        double plotX[2] = {exp.getSegments()[i].getPts1X(), exp.getSegments()[i].getPts2X()};
-        double plotY[2] = {exp.getSegments()[i].getPts1Y(), exp.getSegments()[i].getPts2Y()};
-        ImPlot::PlotLine("expanded arm", plotX, plotY, 2);
+      for (int i = 0; i < exp.getPolygons().size(); ++i) {
+        for (int j = 0; j < exp.getPolygons()[i].size(); ++j) {
+          Eigen::Vector2d pt1 = exp.getPolygons()[i].getPoints()[j];
+          Eigen::Vector2d pt2 = exp.getPolygons()[i].getPoints()[(j + 1) % exp.getPolygons()[i].size()];
+          double plotX[2] = {pt1.x(), pt2.x()};
+          double plotY[2] = {pt1.y(), pt2.y()};
+          ImPlot::PlotLine("exp", plotX, plotY, 2);
+        }
       }
       std::vector<double> elevatorX = {-ELEVATOR_2_L1_FRONT + ELEVATOR_MIN_POSITION_METER * ELEVATOR_COS_ANGLE, -ELEVATOR_2_L1_FRONT + ELEVATOR_MAX_POSITION_METER * ELEVATOR_COS_ANGLE};
       std::vector<double> elevatorY = {ELEVATOR_2_GROUND + ELEVATOR_MIN_POSITION_METER * ELEVATOR_SIN_ANGLE, ELEVATOR_2_GROUND + ELEVATOR_MAX_POSITION_METER * ELEVATOR_SIN_ANGLE};
