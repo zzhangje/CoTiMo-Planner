@@ -7,12 +7,14 @@ endif()
 
 project(Cyber-Planner)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_definitions(-D_USE_MATH_DEFINES)
+add_compile_options("/utf-8")
 
+find_package(fmt CONFIG REQUIRED)
 find_package(Eigen3 CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
@@ -60,6 +62,7 @@ target_link_libraries(server PRIVATE
     glfw
     unofficial::gl3w::gl3w
     OpenGL::GL
+    fmt::fmt-header-only
 )
 
 add_executable(client

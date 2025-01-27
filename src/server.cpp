@@ -1,11 +1,15 @@
 ﻿// #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <fmt/chrono.h>
+#include <fmt/color.h>
+#include <fmt/core.h>
 #include <grpcpp/grpcpp.h>
 #include <implot.h>
 
 #include <Eigen/Eigen>
 #include <atomic>
 #include <chrono>
+#include <cstdarg>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -50,24 +54,6 @@ bool g_hasNewTrajectory = false;
 bool g_isRunning = true;
 std::mutex g_trajectoryMutex;
 
-// redirect stdout to imgui stream
-std::stringstream g_ss;
-std::streambuf* g_coutbuf = std::cout.rdbuf();
-std::streambuf* g_cerrbuf = std::cerr.rdbuf();
-std::deque<std::string> consoleOutput;
-const size_t consoleOutputSize = 500;
-
-void RedirectStdout() {
-  g_coutbuf = std::cout.rdbuf();
-  std::cout.rdbuf(g_ss.rdbuf());
-  std::streambuf* g_cerrbuf = std::cerr.rdbuf();
-  std::cerr.rdbuf(g_ss.rdbuf());
-}
-void RestoreStdout() {
-  std::cout.rdbuf(g_coutbuf);
-  std::cerr.rdbuf(g_cerrbuf);
-}
-
 void CompatibleFreeConsole() {
 #ifdef _WIN32
   FreeConsole();
@@ -76,6 +62,43 @@ void CompatibleFreeConsole() {
   close(STDOUT_FILENO);
   close(STDERR_FILENO);
 #endif
+}
+
+struct ImGuiMessage {
+  ImVec4 color;
+  char* level;
+  char* message;
+  std::chrono::system_clock::time_point timestamp;
+};
+std::deque<ImGuiMessage> consoleOutputs;
+const size_t consoleOutputSize = 500;
+
+void ShowError(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  char buffer[1024];
+  int n = vsnprintf(buffer, sizeof(buffer), format, args);
+  buffer[sizeof(buffer) - 1] = '\0';
+  consoleOutputs.push_back({ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR", buffer, std::chrono::system_clock::now()});
+  va_end(args);
+}
+void ShowWarn(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  buffer[sizeof(buffer) - 1] = '\0';
+  consoleOutputs.push_back({ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "WARN ", buffer, std::chrono::system_clock::now()});
+  va_end(args);
+}
+void ShowInfo(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  char buffer[1024];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  buffer[sizeof(buffer) - 1] = '\0';
+  consoleOutputs.push_back({ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "INFO ", buffer, std::chrono::system_clock::now()});
+  va_end(args);
 }
 
 // gRPC service
@@ -87,6 +110,7 @@ class Service final : public ArmTrajectoryService::Service {
     log_info("Received request: start(%.2f, %.2f), end(%.2f, %.2f)",
              start.shoulderheightmeter(), start.elbowpositiondegree(),
              end.shoulderheightmeter(), end.elbowpositiondegree());
+    ShowInfo("Receive a request");
 
     // get the grid index of the start and end points
     Eigen::Vector2d startTR(start.shoulderheightmeter(), start.elbowpositiondegree());
@@ -118,9 +142,11 @@ class Service final : public ArmTrajectoryService::Service {
     std::vector<Eigen::Vector2i> path, visited, sampledPath;
     if (!astar::astar(grid, startGridIdx, endGridIdx, path, visited)) {
       log_warn("Failed to find a path in the expanded map.");
+      ShowWarn("Failed to find a path in the expanded map.");
       getGridMap(armType, grid);
       if (!astar::astar(grid, startGridIdx, endGridIdx, path, visited)) {
         log_error("Failed to find a path in the original map.");
+        ShowError("Failed to find a path in the original map.");
         return Status::CANCELLED;
       }
     }
@@ -142,6 +168,7 @@ class Service final : public ArmTrajectoryService::Service {
     }
 
     log_info("Generated trajectory with %d points", trajectory->states_size());
+    ShowInfo("Path successfully generated");
     return Status::OK;
   }
 };
@@ -156,27 +183,24 @@ void RunGrpcServer() {
   builder.RegisterService(&service);
 
   std::unique_ptr<Server> server(builder.BuildAndStart());
-  log_info(("Server is running on 0.0.0.0:" + config::params::GRPC_PORT).c_str());
+  log_info("Server is running on %s", serverAddress.c_str());
+  ShowInfo("Server is running on %s", serverAddress.c_str());
 
   while (g_isRunning) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   server->Shutdown();
+  ShowInfo("Server is shutting down.");
   log_info("Server is shutting down.");
-}
-
-void ShowError(const char* message) {
-  std::cerr << "Error: " << message << std::endl;
 }
 
 int main(int argc, char* argv[]) {
   // free console
   CompatibleFreeConsole();
 
-  // redirect stdout
-  RedirectStdout();
   log_set_quiet(false);
+  ShowInfo("Welcome to Cyber Planner 2025");
   log_info(
       "Welcome to Cyber Planner 2025!"
       "\n"
@@ -193,6 +217,7 @@ int main(int argc, char* argv[]) {
 
   // initialize glfw
   if (!glfwInit()) {
+    ShowError("Failed to initialize GLFW.");
     log_error("Failed to initialize GLFW.");
     return -1;
   }
@@ -200,6 +225,7 @@ int main(int argc, char* argv[]) {
   // create window
   GLFWwindow* window = glfwCreateWindow(1280, 720, "Cyber Planner 2025", NULL, NULL);
   if (!window) {
+    ShowError("Failed to create window.");
     log_error("Failed to create window.");
     glfwTerminate();
     return -1;
@@ -210,6 +236,7 @@ int main(int argc, char* argv[]) {
   // initialize glew
   // glewExperimental = GL_TRUE;
   // if (glewInit() != GLEW_OK) {
+  //   ShowError("Failed to initialize GLEW.");
   //   log_error("Failed to initialize GLEW.");
   //   return -1;
   // }
@@ -244,24 +271,14 @@ int main(int argc, char* argv[]) {
   // main loop
   while (!glfwWindowShouldClose(window)) {
     if (!serverThread.joinable()) {
-      ShowError("Server thread is not joinable!");
+      ShowError("Server thread may dead, please restart the program.");
+      log_error("Server thread is not joinable!");
     }
 
     // start the frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-
-    // handle outstream
-    std::string line;
-    while (std::getline(g_ss, line)) {
-      consoleOutput.push_back(line);
-      if (consoleOutput.size() > consoleOutputSize) {
-        consoleOutput.pop_front();
-      }
-    }
-    g_ss.str(std::string());
-    g_ss.clear();
 
     // handle new trajectory
     if (g_hasNewTrajectory) {
@@ -307,10 +324,15 @@ int main(int argc, char* argv[]) {
       }
       double dt = simTime - trajectory.states(simIndex).timestamp();
       double factor = dt / (trajectory.states(simIndex + 1).timestamp() - trajectory.states(simIndex).timestamp());
-      t = trajectory.states(simIndex).position().shoulderheightmeter() + factor *
-                                                                             (trajectory.states(simIndex + 1).position().shoulderheightmeter() - trajectory.states(simIndex).position().shoulderheightmeter());
-      r = trajectory.states(simIndex).position().elbowpositiondegree() + factor *
-                                                                             (trajectory.states(simIndex + 1).position().elbowpositiondegree() - trajectory.states(simIndex).position().elbowpositiondegree());
+      t = trajectory.states(simIndex).position().shoulderheightmeter() * (1 - factor) +
+          trajectory.states(simIndex + 1).position().shoulderheightmeter() * factor;
+      r = trajectory.states(simIndex).position().elbowpositiondegree() * (1 - factor) +
+          trajectory.states(simIndex + 1).position().elbowpositiondegree() * factor;
+    }
+
+    // handle console output
+    while (consoleOutputs.size() > consoleOutputSize) {
+      consoleOutputs.pop_front();
     }
 
     /**
@@ -318,10 +340,17 @@ int main(int argc, char* argv[]) {
      */
     ImGui::Begin("Console Output");
     ImGui::BeginChild("console", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), true);
-    for (const std::string& line : consoleOutput) {
-      ImGui::TextUnformatted(line.c_str());
+    for (const ImGuiMessage& message : consoleOutputs) {
+      ImGui::Text(fmt::format("{:%H:%M:%S}", fmt::localtime(std::chrono::system_clock::to_time_t(message.timestamp))).c_str());
+      ImGui::SameLine();
+      ImGui::PushStyleColor(ImGuiCol_Text, message.color);
+      ImGui::Text(message.level);
+      ImGui::SameLine();
+      ImGui::PopStyleColor();
+      ImGui::Text(message.message);
     }
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+      // hang the scroll bar at the bottom
       ImGui::SetScrollHereY(1.0f);
     }
     ImGui::EndChild();
@@ -447,6 +476,20 @@ int main(int argc, char* argv[]) {
         double plotY[2] = {exp.getSegments()[i].getPts1Y(), exp.getSegments()[i].getPts2Y()};
         ImPlot::PlotLine("expanded arm", plotX, plotY, 2);
       }
+      if (path.size() > 0) {
+        arm = Object(armType, path[0].x(), path[0].y());
+        for (int i = 0; i < arm.getSegments().size(); ++i) {
+          double plotX[2] = {arm.getSegments()[i].getPts1X(), arm.getSegments()[i].getPts2X()};
+          double plotY[2] = {arm.getSegments()[i].getPts1Y(), arm.getSegments()[i].getPts2Y()};
+          ImPlot::PlotLine("target", plotX, plotY, 2);
+        }
+        arm = Object(armType, path[path.size() - 1].x(), path[path.size() - 1].y());
+        for (int i = 0; i < arm.getSegments().size(); ++i) {
+          double plotX[2] = {arm.getSegments()[i].getPts1X(), arm.getSegments()[i].getPts2X()};
+          double plotY[2] = {arm.getSegments()[i].getPts1Y(), arm.getSegments()[i].getPts2Y()};
+          ImPlot::PlotLine("target", plotX, plotY, 2);
+        }
+      }
       std::vector<double> elevatorX = {-ELEVATOR_2_L1_FRONT + ELEVATOR_MIN_POSITION_METER * ELEVATOR_COS_ANGLE, -ELEVATOR_2_L1_FRONT + ELEVATOR_MAX_POSITION_METER * ELEVATOR_COS_ANGLE};
       std::vector<double> elevatorY = {ELEVATOR_2_GROUND + ELEVATOR_MIN_POSITION_METER * ELEVATOR_SIN_ANGLE, ELEVATOR_2_GROUND + ELEVATOR_MAX_POSITION_METER * ELEVATOR_SIN_ANGLE};
       ImPlot::PlotLine("elevator", elevatorX.data(), elevatorY.data(), 2);
@@ -486,9 +529,6 @@ int main(int argc, char* argv[]) {
   if (serverThread.joinable()) {
     serverThread.join();
   }
-
-  // restore stdout
-  RestoreStdout();
 
   return 0;
 }
