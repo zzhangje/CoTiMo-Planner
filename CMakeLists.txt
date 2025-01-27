@@ -43,21 +43,12 @@ file(GLOB_RECURSE HEADER_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
 )
 
-if(WIN32)
-    add_executable(server WIN32
-        src/server.cpp
-        src/implot/implot.cpp
-        src/implot/implot_items.cpp
-        ${HEADER_FILES}
-    )
-else()
-    add_executable(server
-        src/server.cpp
-        src/implot/implot.cpp
-        src/implot/implot_items.cpp
-        ${HEADER_FILES}
-    )
-endif()
+add_executable(server
+    src/server.cpp
+    src/implot/implot.cpp
+    src/implot/implot_items.cpp
+    ${HEADER_FILES}
+)
 
 target_include_directories(server PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/proto
@@ -71,12 +62,6 @@ target_link_libraries(server PRIVATE
     unofficial::gl3w::gl3w
     OpenGL::GL
 )
-
-if(WIN32)
-    set_target_properties(server PROPERTIES
-        LINK_FLAGS "/SUBSYSTEM:WINDOWS"
-    )
-endif()
 
 add_executable(client
     src/client.cpp

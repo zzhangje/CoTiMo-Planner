@@ -6,6 +6,7 @@
 #include <Eigen/Eigen>
 #include <atomic>
 #include <chrono>
+#include <iostream>
 #include <mutex>
 #include <thread>
 #include <iostream>
@@ -21,6 +22,15 @@
 #include "proto/ArmTrajectoryService.grpc.pb.h"
 #include "space.hpp"
 #include "visualize.hpp"
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 using com::nextinnovation::armtrajectoryservice::ArmPositionState;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectory;
@@ -57,6 +67,16 @@ void RedirectStdout() {
 void RestoreStdout() {
   std::cout.rdbuf(g_coutbuf);
   std::cerr.rdbuf(g_cerrbuf);
+}
+
+void CompatibleFreeConsole() {
+#ifdef _WIN32
+  FreeConsole();
+#else
+  close(STDIN_FILENO);
+  close(STDOUT_FILENO);
+  close(STDERR_FILENO);
+#endif
 }
 
 // gRPC service
@@ -148,10 +168,13 @@ void RunGrpcServer() {
 }
 
 void ShowError(const char* message) {
-    std::cerr << "Error: " << message << std::endl;
+  std::cerr << "Error: " << message << std::endl;
 }
 
 int main(int argc, char* argv[]) {
+  // free console
+  CompatibleFreeConsole();
+  
   // redirect stdout
   RedirectStdout();
   log_set_quiet(false);
