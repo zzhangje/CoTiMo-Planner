@@ -73,7 +73,7 @@ void getGridMap(ObjectType type, std::vector<std::vector<bool>>& map) {
   for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
     for (int rr = 0; rr < ARM_GRID_NUMS; ++rr) {
       Eigen::Vector2d tr = getTR(tt, rr);
-      map[tt][rr] = !env.intersect(arm.armTransform(tr.x(), tr.y()));
+      map[tt][rr] = env.intersect(arm.armTransform(tr.x(), tr.y()));
     }
   }
   return;

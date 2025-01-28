@@ -23,8 +23,8 @@ bool astar(const std::vector<std::vector<bool>>& grid_map,
       n, std::vector<Eigen::Vector2i>(m, Eigen::Vector2i(-1, -1)));
 
   std::vector<Eigen::Vector2i> dir = {
-      Eigen::Vector2i(0, 1),  Eigen::Vector2i(1, 0),  Eigen::Vector2i(0, -1),
-      Eigen::Vector2i(-1, 0), Eigen::Vector2i(1, 1),  Eigen::Vector2i(1, -1),
+      Eigen::Vector2i(0, 1), Eigen::Vector2i(1, 0), Eigen::Vector2i(0, -1),
+      Eigen::Vector2i(-1, 0), Eigen::Vector2i(1, 1), Eigen::Vector2i(1, -1),
       Eigen::Vector2i(-1, 1), Eigen::Vector2i(-1, -1)};
 
   std::multimap<double, Eigen::Vector2i> open;
@@ -46,7 +46,7 @@ bool astar(const std::vector<std::vector<bool>>& grid_map,
       Eigen::Vector2i next = current + d;
       // out of bounds or obstacle
       if (next(0) < 0 || next(0) >= n || next(1) < 0 || next(1) >= m ||
-          !grid_map[next(0)][next(1)]) {
+          grid_map[next(0)][next(1)]) {
         continue;
       }
 
@@ -117,8 +117,8 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
   std::vector<std::vector<Eigen::Vector2i>> parent(
       n, std::vector<Eigen::Vector2i>(m, Eigen::Vector2i(-1, -1)));
   std::vector<Eigen::Vector2i> dir = {
-      Eigen::Vector2i(0, 1),  Eigen::Vector2i(1, 0),  Eigen::Vector2i(0, -1),
-      Eigen::Vector2i(-1, 0), Eigen::Vector2i(1, 1),  Eigen::Vector2i(1, -1),
+      Eigen::Vector2i(0, 1), Eigen::Vector2i(1, 0), Eigen::Vector2i(0, -1),
+      Eigen::Vector2i(-1, 0), Eigen::Vector2i(1, 1), Eigen::Vector2i(1, -1),
       Eigen::Vector2i(-1, 1), Eigen::Vector2i(-1, -1)};
 
   std::multimap<double, Eigen::Vector2i> open;

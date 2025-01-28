@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "builtin-baseline": "4eeb300260f6c8773f6c0827cb9409b9181e120e",
   "dependencies": [
+    "fmt",
     "eigen3",
     "grpc",
     "glfw3",
@@ -10,7 +11,11 @@
     "opengl",
     {
       "name": "imgui",
-      "features": ["docking-experimental", "glfw-binding", "opengl3-binding"]
+      "features": [
+        "docking-experimental",
+        "glfw-binding",
+        "opengl3-binding"
+      ]
     },
     "protobuf"
   ]

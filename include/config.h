@@ -41,7 +41,7 @@ const std::string ROBOT_PARAMS_VERSION =
 // the prohitbit area of the drivetrain
 constexpr double ROBOT_WIDTH = 0.7;  // the width of the prohitbit area
 constexpr double ROBOT_HEIGHT =
-    0.2;  // the height of the prohitbit area to the ground
+    0.1;  // the height of the prohitbit area to the ground
 constexpr double ROBOT_2_L1_FRONT =
     0.05;  // the distance from the prohitbit area to the front of the reef
 
