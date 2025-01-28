@@ -13,6 +13,7 @@
     {
       "name": "imgui",
       "features": [
+        "freetype-lunasvg",
         "docking-experimental",
         "glfw-binding",
         "opengl3-binding"

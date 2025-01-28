@@ -68,6 +68,13 @@ target_link_libraries(server PRIVATE
     fmt::fmt-header-only
 )
 
+add_custom_command(TARGET server POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_SOURCE_DIR}/imgui.ini
+    $<TARGET_FILE_DIR:server>/imgui.ini
+    COMMENT "Copying layout to output directory"
+)
+
 add_executable(client
     src/client.cpp
     ${HEADER_FILES}

@@ -30,8 +30,9 @@ class Client {
 
         // print the trajectory
         for (const ArmTrajectoryState& state : states) {
-          log_info("t=%.3f, h(m)=%.2f, θ(rad)=%.2f, I_h(A)=%.2f, I_θ(A)=%.2f",
-                   state.timestamp(), state.position().shoulderheightmeter(),
+          log_info("t=%.3f, h=%.2f, theta=%.2f, vel_h=%.2f, vel_theta=%.2f, V_h=%.2f, V_theta=%.2f",
+                   state.timestamp(),
+                   state.position().shoulderheightmeter(),
                    state.position().elbowpositiondegree(),
                    state.current().shouldercurrentamp(),
                    state.current().elbowcurrentamp());
