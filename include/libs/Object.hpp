@@ -101,8 +101,7 @@ class Object {
                           ELEVATOR_2_GROUND + dt * ELEVATOR_SIN_ANGLE),
           dr));
     }
-    this->polygons = new_polygons;
-    return Object(this->polygons);
+    return Object(new_polygons);
   }
 
   std::vector<Geometry::Polygon> getPolygons() { return this->polygons; }

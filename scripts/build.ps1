@@ -2,7 +2,7 @@
 
 $SCRIPT_DIR = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ROOT_DIR = Split-Path -Parent $SCRIPT_DIR
-$BUILD_DIR = Join-Path $ROOT_DIR "build-windows"
+$BUILD_DIR = Join-Path $ROOT_DIR "build"
 $VCPKG_ROOT = Join-Path $ROOT_DIR "vcpkg"
 
 New-Item -ItemType Directory -Force -Path $BUILD_DIR | Out-Null
