@@ -1,4 +1,4 @@
-﻿#include <grpcpp/grpcpp.h>
+#include <grpcpp/grpcpp.h>
 
 #include "config.h"
 #include "log.hpp"
@@ -30,7 +30,7 @@ class Client {
 
         // print the trajectory
         for (const ArmTrajectoryState& state : states) {
-          log_info("t=%.3f, h=%.2f, θ=%.2f, vel_h=%.2f, vel_θ=%.2f, V_h=%.2f, V_θ=%.2f",
+          log_info("t=%.3f, h=%.2f, theta=%.2f, vel_h=%.2f, vel_theta=%.2f, V_h=%.2f, V_theta=%.2f",
                    state.timestamp(),
                    state.position().shoulderheightmeter(),
                    state.position().elbowpositiondegree(),

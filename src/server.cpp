@@ -1,4 +1,4 @@
-// #include <GL/glew.h>
+﻿// #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <fmt/chrono.h>
 #include <fmt/color.h>
@@ -13,6 +13,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 
 #include "Object.hpp"
 #include "Polygon.hpp"
@@ -79,39 +80,68 @@ void CompatibleAllocConsole() {
 
 struct ImGuiMessage {
   ImVec4 color;
-  char* level;
-  char* message;
+  std::string level;
+  std::string message;
   std::chrono::system_clock::time_point timestamp;
 };
 std::deque<ImGuiMessage> consoleOutputs;
+std::mutex consoleOutputMutex;
 const size_t consoleOutputSize = 500;
 
-void ShowError(const char* format, ...) {
+enum class LogLevel {
+  LOG_INFO,
+  LOG_WARN,
+  LOG_ERROR
+};
+
+void ShowLog(LogLevel level, const char* format, ...) {
+  static const std::unordered_map<LogLevel, std::pair<ImVec4, const char*>> logConfig = {
+      {LogLevel::LOG_INFO, {{0.0f, 1.0f, 0.0f, 1.0f}, "INFO "}},
+      {LogLevel::LOG_WARN, {{1.0f, 1.0f, 0.0f, 1.0f}, "WARN "}},
+      {LogLevel::LOG_ERROR, {{1.0f, 0.0f, 0.0f, 1.0f}, "ERROR"}}};
+
   va_list args;
   va_start(args, format);
-  char buffer[1024];
-  int n = vsnprintf(buffer, sizeof(buffer), format, args);
-  buffer[sizeof(buffer) - 1] = '\0';
-  consoleOutputs.push_back({ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR", buffer, std::chrono::system_clock::now()});
-  va_end(args);
-}
-void ShowWarn(const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  char buffer[1024];
+  char buffer[2048];
   vsnprintf(buffer, sizeof(buffer), format, args);
   buffer[sizeof(buffer) - 1] = '\0';
-  consoleOutputs.push_back({ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "WARN ", buffer, std::chrono::system_clock::now()});
   va_end(args);
+
+  const auto& config = logConfig.at(level);
+  {
+    std::lock_guard<std::mutex> lock(consoleOutputMutex);
+    consoleOutputs.push_back({config.first, config.second, buffer, std::chrono::system_clock::now()});
+    if (consoleOutputs.size() > consoleOutputSize) {
+      consoleOutputs.pop_front();
+    }
+  }
 }
-void ShowInfo(const char* format, ...) {
+
+inline void ShowError(const char* format, ...) {
   va_list args;
   va_start(args, format);
-  char buffer[1024];
+  char buffer[2048];
   vsnprintf(buffer, sizeof(buffer), format, args);
-  buffer[sizeof(buffer) - 1] = '\0';
-  consoleOutputs.push_back({ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "INFO ", buffer, std::chrono::system_clock::now()});
   va_end(args);
+  ShowLog(LogLevel::LOG_ERROR, "%s", buffer);
+}
+
+inline void ShowWarn(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  char buffer[2048];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  ShowLog(LogLevel::LOG_WARN, "%s", buffer);
+}
+
+inline void ShowInfo(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  char buffer[2048];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  va_end(args);
+  ShowLog(LogLevel::LOG_INFO, "%s", buffer);
 }
 
 // gRPC service
@@ -210,7 +240,7 @@ void RunGrpcServer() {
 
 int main(int argc, char* argv[]) {
   // free console
-  CompatibleFreeConsole();
+  // CompatibleFreeConsole();
 
   log_set_quiet(false);
   ShowInfo("Welcome to Cyber Planner 2025");
@@ -281,6 +311,7 @@ int main(int argc, char* argv[]) {
   double simT = 0, simR = 0;
   int simIndex = 0;
   auto simStart = std::chrono::high_resolution_clock::now();
+  io.IniFilename = "imgui.ini";
 
   // main loop
   while (!glfwWindowShouldClose(window)) {
@@ -352,20 +383,27 @@ int main(int argc, char* argv[]) {
     /**
      * Window 1: Console Log
      */
-    ImGui::Begin("Console Output");
+    ImGui::Begin("Console Output", nullptr, ImGuiWindowFlags_NoResize);
     ImGui::BeginChild("console", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), true);
-    for (const ImGuiMessage& message : consoleOutputs) {
-      ImGui::Text(fmt::format("{:%H:%M:%S}", fmt::localtime(std::chrono::system_clock::to_time_t(message.timestamp))).c_str());
-      ImGui::SameLine();
-      ImGui::PushStyleColor(ImGuiCol_Text, message.color);
-      ImGui::Text(message.level);
-      ImGui::SameLine();
-      ImGui::PopStyleColor();
-      ImGui::Text(message.message);
-    }
-    // hang the scroll bar at the bottom
-    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-      ImGui::SetScrollHereY(1.0f);
+    {
+      std::lock_guard<std::mutex> lock(consoleOutputMutex);
+      ImGuiListClipper clipper;
+      clipper.Begin(consoleOutputs.size());
+      while (clipper.Step()) {
+        for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+          const auto& message = consoleOutputs[i];
+          ImGui::Text(fmt::format("{:%H:%M:%S}", fmt::localtime(std::chrono::system_clock::to_time_t(message.timestamp))).c_str());
+          ImGui::SameLine();
+          ImGui::PushStyleColor(ImGuiCol_Text, message.color);
+          ImGui::Text(message.level.c_str());
+          ImGui::SameLine();
+          ImGui::PopStyleColor();
+          ImGui::TextWrapped(message.message.c_str());
+        }
+      }
+      if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 10.0f) {
+        ImGui::SetScrollHereY(1.0f);
+      }
     }
     ImGui::EndChild();
     ImGui::End();
@@ -373,7 +411,7 @@ int main(int argc, char* argv[]) {
     /**
      * Window 2: Arm Trajectory
      */
-    ImGui::Begin("Arm Trajectory");
+    ImGui::Begin("Arm Trajectory", nullptr, ImGuiWindowFlags_NoResize);
     if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (degree)")) {
       ImPlot::SetupAxisLimits(ImAxis_X1, ELEVATOR_MIN_POSITION_METER, ELEVATOR_MAX_POSITION_METER);
       ImPlot::SetupAxisLimits(ImAxis_Y1, ARM_MIN_THETA_DEGREE, ARM_MAX_THETA_DEGREE);
@@ -413,7 +451,7 @@ int main(int argc, char* argv[]) {
     /**
      * Window 3: Trajectory Params
      */
-    ImGui::Begin("Trajectory Params");
+    ImGui::Begin("Trajectory Params", nullptr, ImGuiWindowFlags_NoResize);
     if (ImPlot::BeginPlot("Shoulder Velocity", "Time (s)", "Velocity (m/s)")) {
       ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ELEVATOR_VMAX, 1.2 * ELEVATOR_VMAX);
       double* velocityT = new double[trajectory.states_size()];
@@ -470,7 +508,7 @@ int main(int argc, char* argv[]) {
     /**
      * Window 4: 2D Projection
      */
-    ImGui::Begin("2D Projection");
+    ImGui::Begin("2D Projection", nullptr, ImGuiWindowFlags_NoResize);
     if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)")) {
       Object env = Object(ObjectType::ENV);
       Object arm = Object(armType).armTransform(simT, simR);

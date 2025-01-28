@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-set(CMAKE_TOOLCHAIN_FILE "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake"
+set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
     CACHE STRING "Vcpkg toolchain file")
 
 set(VCPKG_MANIFEST_MODE ON)
@@ -66,6 +66,13 @@ target_link_libraries(server PRIVATE
     unofficial::gl3w::gl3w
     OpenGL::GL
     fmt::fmt-header-only
+)
+
+add_custom_command(TARGET server POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_SOURCE_DIR}/imgui.ini
+    $<TARGET_FILE_DIR:server>/imgui.ini
+    COMMENT "Copying layout to output directory"
 )
 
 add_executable(client
