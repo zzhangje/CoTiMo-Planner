@@ -30,12 +30,12 @@ class Client {
 
         // print the trajectory
         for (const ArmTrajectoryState& state : states) {
-          log_info("t=%.3f, h=%.2f, theta=%.2f, vel_h=%.2f, vel_theta=%.2f, V_h=%.2f, V_theta=%.2f",
+          log_info("t=%.3f, h=%.2f, theta=%.2f, I_h=%.2f, I_theta=%.2f",
                    state.timestamp(),
                    state.position().shoulderheightmeter(),
-                   state.position().elbowpositiondegree(),
-                   state.current().shouldercurrentamp(),
-                   state.current().elbowcurrentamp());
+                   state.position().elbowpositionradian(),
+                   state.current().shouldercurrentampere(),
+                   state.current().elbowcurrentampere());
         }
       } else {
         log_warn("The response does not contain the trajectory.");
@@ -62,20 +62,20 @@ int main() {
     std::cin >> shoulderHeight;
     request->mutable_start()->set_shoulderheightmeter(shoulderHeight);
 
-    std::cout << "$ Please enter the elbow position in degrees, (" << ARM_MIN_THETA_DEGREE << ',' << ARM_MAX_THETA_DEGREE << "): ";
+    std::cout << "$ Please enter the elbow position in degrees, (" << ARM_MIN_THETA_RADIAN << ',' << ARM_MAX_THETA_RADIAN << "): ";
     double elbowPosition;
     std::cin >> elbowPosition;
-    request->mutable_start()->set_elbowpositiondegree(elbowPosition);
+    request->mutable_start()->set_elbowpositionradian(elbowPosition);
 
     std::cout << "$ Please enter the end shoulder height in meters, (" << ELEVATOR_MIN_POSITION_METER << ',' << ELEVATOR_MAX_POSITION_METER << "): ";
     double endShoulderHeight;
     std::cin >> endShoulderHeight;
     request->mutable_end()->set_shoulderheightmeter(endShoulderHeight);
 
-    std::cout << "$ Please enter the end elbow position in degrees, (" << ARM_MIN_THETA_DEGREE << ',' << ARM_MAX_THETA_DEGREE << "): ";
+    std::cout << "$ Please enter the end elbow position in degrees, (" << ARM_MIN_THETA_RADIAN << ',' << ARM_MAX_THETA_RADIAN << "): ";
     double endElbowPosition;
     std::cin >> endElbowPosition;
-    request->mutable_end()->set_elbowpositiondegree(endElbowPosition);
+    request->mutable_end()->set_elbowpositionradian(endElbowPosition);
 
     request->set_hasalgae(false);
     request->set_hascoral(false);
@@ -83,7 +83,7 @@ int main() {
     log_info("Sending request: start(%.2f, %.2f), end(%.2f, %.2f), algae(%d), coral(%d)",
              shoulderHeight, elbowPosition, endShoulderHeight, endElbowPosition,
              request->hasalgae(), request->hascoral());
-    Client("localhost:" + nextinnovation::nextinnovation::GRPC_PORT, *request);
+    Client("localhost:" + nextinnovation::config::GRPC_PORT, *request);
     std::cout << std::endl
               << "=== Press Ctrl+C to exit ===" << std::endl
               << std::endl;

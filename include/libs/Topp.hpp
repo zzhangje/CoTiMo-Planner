@@ -222,9 +222,9 @@ class Topp {
       state = trajectory->add_states();
       state->set_timestamp(t);
       state->mutable_position()->set_shoulderheightmeter(points[i](0));
-      state->mutable_position()->set_elbowpositiondegree(points[i](1));
-      state->mutable_current()->set_shoulderheightampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(i)) * ck(i) + ELEVATOR_Ka * qt2(i) * ak(i) + ELEVATOR_Ka * qt1(i) * bk(i) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i))) / ELEVATOR_R);
-      state->mutable_current()->set_elbowpositionampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(i) / ARM_Kv + ARM_Kv * qr2(i)) * ck(i) + ARM_Ka * qr2(i) * ak(i) + ARM_Ka * qr1(i) * bk(i) + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i))) / ARM_R);
+      state->mutable_position()->set_elbowpositionradian(points[i](1));
+      state->mutable_current()->set_shouldercurrentampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(i)) * ck(i) + ELEVATOR_Ka * qt2(i) * ak(i) + ELEVATOR_Ka * qt1(i) * bk(i) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i))) / ELEVATOR_R);
+      state->mutable_current()->set_elbowcurrentampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(i) / ARM_Kv + ARM_Kv * qr2(i)) * ck(i) + ARM_Ka * qr2(i) * ak(i) + ARM_Ka * qr1(i) * bk(i) + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i))) / ARM_R);
       voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * qt2(i) * ak(i) + ELEVATOR_Ka * qt1(i) * bk(i) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i)), ARM_Kv * qr1(i) * ck(i) + ARM_Ka * qr2(i) * ak(i) + ARM_Ka * qr1(i) * bk(i) + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i))));
       velocity.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i), ARM_Kv * qr1(i) * ck(i)));
       t += ARC_LEN * 2 / (ck(i) + ck(i + 1));
@@ -233,9 +233,9 @@ class Topp {
     state = trajectory->add_states();
     state->set_timestamp(t);
     state->mutable_position()->set_shoulderheightmeter(points[n](0));
-    state->mutable_position()->set_elbowpositiondegree(points[n](1));
-    state->mutable_current()->set_shoulderheightampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(n) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(n)) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(n))) / ELEVATOR_R);
-    state->mutable_current()->set_elbowpositionampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(n) / ARM_Kv + ARM_Kv * qr2(n)) * ck(n) + ARM_Ka * qr1(n) * bk(n) + ARM_Kg * cos(qr(n)) + ARM_Ks * sign(qr1(n))) / ARM_R);
+    state->mutable_position()->set_elbowpositionradian(points[n](1));
+    state->mutable_current()->set_shouldercurrentampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(n) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(n)) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(n))) / ELEVATOR_R);
+    state->mutable_current()->set_elbowcurrentampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(n) / ARM_Kv + ARM_Kv * qr2(n)) * ck(n) + ARM_Ka * qr1(n) * bk(n) + ARM_Kg * cos(qr(n)) + ARM_Ks * sign(qr1(n))) / ARM_R);
     voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(n)), ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n) + ARM_Kg * cos(qr(n)) + ARM_Ks * sign(qr1(n))));
     velocity.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n), ARM_Kv * qr1(n) * ck(n)));
   }
@@ -436,13 +436,13 @@ class Topp {
      * current constraints
      */
     for (int i = 0; i < n; ++i) {
-      P.insert(n_ineq_cnt, getC(i)) = -ELEVATOR_METTER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getC(i)) = -ELEVATOR_METER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt1(i);
       P.insert(n_ineq_cnt, getA(i)) = ELEVATOR_Ka * qt2(i);
       P.insert(n_ineq_cnt, getB(i)) = ELEVATOR_Ka * qt1(i);
       q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R - ELEVATOR_Kg - ELEVATOR_Ks * sign(qt1(i));
       ++n_ineq_cnt;
 
-      P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_METTER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv - ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_METER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv - ELEVATOR_Kv * qt1(i);
       P.insert(n_ineq_cnt, getA(i)) = -ELEVATOR_Ka * qt2(i);
       P.insert(n_ineq_cnt, getB(i)) = -ELEVATOR_Ka * qt1(i);
       q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i));
