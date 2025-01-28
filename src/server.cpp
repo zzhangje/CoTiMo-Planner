@@ -37,6 +37,14 @@
 #include <unistd.h>
 #endif
 
+#define LOCK_WINDOW_RESIZE
+
+#ifdef LOCK_WINDOW_RESIZE
+#define WINDOW_FLAGS ImGuiWindowFlags_NoResize
+#else
+#define WINDOW_FLAGS 0
+#endif
+
 using com::nextinnovation::armtrajectoryservice::ArmPositionState;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectory;
 using com::nextinnovation::armtrajectoryservice::ArmTrajectoryParameter;
@@ -272,7 +280,8 @@ int main(int argc, char* argv[]) {
   }
 
   // create window
-  GLFWwindow* window = glfwCreateWindow(1280, 720, "Cyber Planner 2025", NULL, NULL);
+  glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);  // 设置窗口启动时最大化
+  GLFWwindow* window = glfwCreateWindow(1920, 1080, "Cyber Planner 2025", NULL, NULL);
   if (!window) {
     ShowError("Failed to create window.");
     log_error("Failed to create window.");
@@ -296,6 +305,8 @@ int main(int argc, char* argv[]) {
   ImGuiIO& io = ImGui::GetIO();
   (void)io;
   ImGui::StyleColorsClassic();
+  ImGui::GetStyle().ScaleAllSizes(2.0f);  
+  io.FontGlobalScale = 2.0f;             
 
   // initialize imgui for glfw
   ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -389,7 +400,7 @@ int main(int argc, char* argv[]) {
     /**
      * Window 1: Console Log
      */
-    ImGui::Begin("Console Output", nullptr, ImGuiWindowFlags_NoResize);
+    ImGui::Begin("Console Output", nullptr, WINDOW_FLAGS);
     ImGui::BeginChild("console", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), true);
     {
       std::lock_guard<std::mutex> lock(consoleOutputMutex);
@@ -417,8 +428,8 @@ int main(int argc, char* argv[]) {
     /**
      * Window 2: Arm Trajectory
      */
-    ImGui::Begin("Arm Trajectory", nullptr, ImGuiWindowFlags_NoResize);
-    if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (degree)")) {
+    ImGui::Begin("Arm Trajectory", nullptr, WINDOW_FLAGS);
+    if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (degree)", ImVec2(-1, 400))) {
       ImPlot::SetupAxisLimits(ImAxis_X1, ELEVATOR_MIN_POSITION_METER, ELEVATOR_MAX_POSITION_METER);
       ImPlot::SetupAxisLimits(ImAxis_Y1, ARM_MIN_THETA_DEGREE, ARM_MAX_THETA_DEGREE);
 
@@ -457,7 +468,7 @@ int main(int argc, char* argv[]) {
     /**
      * Window 3: Trajectory Params
      */
-    ImGui::Begin("Trajectory Params", nullptr, ImGuiWindowFlags_NoResize);
+    ImGui::Begin("Trajectory Params", nullptr, WINDOW_FLAGS);
     if (ImPlot::BeginPlot("Shoulder Velocity", "Time (s)", "Velocity (m/s)")) {
       ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ELEVATOR_VMAX, 1.2 * ELEVATOR_VMAX);
       double* velocityT = new double[trajectory.states_size()];
@@ -514,8 +525,8 @@ int main(int argc, char* argv[]) {
     /**
      * Window 4: 2D Projection
      */
-    ImGui::Begin("2D Projection", nullptr, ImGuiWindowFlags_NoResize);
-    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)")) {
+    ImGui::Begin("2D Projection", nullptr, WINDOW_FLAGS);
+    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)", ImVec2(-1, 400))) {
       Object env = Object(ObjectType::ENV);
       Object arm = Object(armType).armTransform(simT, simR);
       Object exp = Object(expType).armTransform(simT, simR);
