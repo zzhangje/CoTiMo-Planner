@@ -24,6 +24,8 @@ find_package(glfw3 REQUIRED)
 find_package(gl3w REQUIRED)
 find_package(OpenGL REQUIRED COMPONENTS OpenGL)
 find_package(imgui CONFIG REQUIRED)
+get_target_property(IMGUI_INCLUDE_DIRS imgui::imgui INTERFACE_INCLUDE_DIRECTORIES)
+# find_package(implot CONFIG REQUIRED)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
