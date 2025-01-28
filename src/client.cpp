@@ -12,7 +12,7 @@ using com::nextinnovation::armtrajectoryservice::Response;
 using grpc::Channel;
 using grpc::ClientContext;
 
-using namespace config::alphabot;
+using namespace nextinnovation::alphabot;
 
 class Client {
  public:
@@ -30,14 +30,11 @@ class Client {
 
         // print the trajectory
         for (const ArmTrajectoryState& state : states) {
-          log_info("t=%.3f, h=%.2f, θ=%.2f, vel_h=%.2f, vel_θ=%.2f, V_h=%.2f, V_θ=%.2f",
-                   state.timestamp(),
-                   state.position().shoulderheightmeter(),
+          log_info("t=%.3f, h(m)=%.2f, θ(rad)=%.2f, I_h(A)=%.2f, I_θ(A)=%.2f",
+                   state.timestamp(), state.position().shoulderheightmeter(),
                    state.position().elbowpositiondegree(),
-                   state.velocity().shouldervelocitymeterpersecond(),
-                   state.velocity().elbowvelocitydegreepersecond(),
-                   state.voltage().shouldervoltagevolt(),
-                   state.voltage().elbowvoltagevolt());
+                   state.current().shouldercurrentamp(),
+                   state.current().elbowcurrentamp());
         }
       } else {
         log_warn("The response does not contain the trajectory.");
@@ -85,7 +82,7 @@ int main() {
     log_info("Sending request: start(%.2f, %.2f), end(%.2f, %.2f), algae(%d), coral(%d)",
              shoulderHeight, elbowPosition, endShoulderHeight, endElbowPosition,
              request->hasalgae(), request->hascoral());
-    Client("localhost:" + config::params::GRPC_PORT, *request);
+    Client("localhost:" + nextinnovation::nextinnovation::GRPC_PORT, *request);
     std::cout << std::endl
               << "=== Press Ctrl+C to exit ===" << std::endl
               << std::endl;

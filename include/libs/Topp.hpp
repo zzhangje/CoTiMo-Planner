@@ -20,8 +20,9 @@
 #define ARC_LEN 1.
 
 using namespace com::nextinnovation::armtrajectoryservice;
-using namespace config::alphabot;
+using namespace nextinnovation::alphabot;
 
+namespace nextinnovation {
 Eigen::VectorXd max(const Eigen::VectorXd& v, const double num) {
   Eigen::VectorXd res = v;
   for (int i = 0; i < v.rows(); ++i) {
@@ -47,6 +48,16 @@ Eigen::VectorXd socProjection(const Eigen::VectorXd& v) {
     Pk *= (v0 + v1.norm()) / 2 / v1.norm();
     return Pk;
   }
+}
+
+double sign(double x) {
+  if (x > 1e-20) {
+    return 1;
+  }
+  if (x < -1e-20) {
+    return -1;
+  }
+  return 0;
 }
 
 class Topp {
@@ -211,10 +222,8 @@ class Topp {
       state->set_timestamp(t);
       state->mutable_position()->set_shoulderheightmeter(points[i](0));
       state->mutable_position()->set_elbowpositiondegree(points[i](1));
-      state->mutable_voltage()->set_shouldervoltagevolt(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)));
-      state->mutable_voltage()->set_elbowvoltagevolt(ARM_Kv * qr1(i) * ck(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i)));
-      state->mutable_velocity()->set_shouldervelocitymeterpersecond(qt1(i) * ck(i));
-      state->mutable_velocity()->set_elbowvelocitydegreepersecond(qr1(i) * ck(i));
+      state->mutable_current()->set_shoulderheightampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(i)) * ck(i) + ELEVATOR_Ka * qt2(i) * ak(i) + ELEVATOR_Ka * qt1(i) * bk(i) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i))) / ELEVATOR_R);
+      state->mutable_current()->set_elbowpositionampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(i) / ARM_Kv + ARM_Kv * qr2(i)) * ck(i) + ARM_Ka * qr2(i) * ak(i) + ARM_Ka * qr1(i) * bk(i) + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i))) / ARM_R);
       t += ARC_LEN * 2 / (ck(i) + ck(i + 1));
     }
 
@@ -222,35 +231,8 @@ class Topp {
     state->set_timestamp(t);
     state->mutable_position()->set_shoulderheightmeter(points[n](0));
     state->mutable_position()->set_elbowpositiondegree(points[n](1));
-    state->mutable_voltage()->set_shouldervoltagevolt(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n));
-    state->mutable_voltage()->set_elbowvoltagevolt(ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n));
-    state->mutable_velocity()->set_shouldervelocitymeterpersecond(qt1(n) * ck(n));
-    state->mutable_velocity()->set_elbowvelocitydegreepersecond(qr1(n) * ck(n));
-  }
-
-  void getTrajectory(std::vector<double>& timestamp, std::vector<Eigen::Vector2d>& position, std::vector<Eigen::Vector2d>& voltage, std::vector<Eigen::Vector2d>& velocity) {
-    Eigen::VectorXd ak = x.segment(getA(0), lenA());
-    Eigen::VectorXd bk = x.segment(getB(0), lenB());
-    Eigen::VectorXd ck = x.segment(getC(0), lenC());
-    Eigen::VectorXd dk = x.segment(getD(0), lenD());
-
-    timestamp.clear(), position.clear(), voltage.clear(), velocity.clear();
-    double t = 0;
-
-    for (int i = 0; i < n; ++i) {
-      timestamp.push_back(t);
-      position.push_back(points[i]);
-      voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * (qt2(i) * ak(i) + qt1(i) * bk(i)), ARM_Kv * qr1(i) * ck(i) + ARM_Ka * (qr2(i) * ak(i) + qr1(i) * bk(i))));
-      velocity.push_back(Eigen::Vector2d(qt1(i) * ck(i), qr1(i) * ck(i)));
-      t += ARC_LEN * 2 / (ck(i) + ck(i + 1));
-    }
-
-    timestamp.push_back(t);
-    position.push_back(points[n]);
-    voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n), ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n)));
-    velocity.push_back(Eigen::Vector2d(qt1(n) * ck(n), qr1(n) * ck(n)));
-
-    return;
+    state->mutable_current()->set_shoulderheightampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(n) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(n)) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(n))) / ELEVATOR_R);
+    state->mutable_current()->set_elbowpositionampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(n) / ARM_Kv + ARM_Kv * qr2(n)) * ck(n) + ARM_Ka * qr1(n) * bk(n) + ARM_Kg * cos(qr(n)) + ARM_Ks * sign(qr1(n))) / ARM_R);
   }
 
  private:
@@ -263,8 +245,8 @@ class Topp {
     for (int i = 0; i <= n; ++i) {
       qt(i) = points[i](0), qr(i) = points[i](1);
     }
-    spline::cubic(qt, qta, qtb, qtc, qtd);
-    spline::cubic(qr, qra, qrb, qrc, qrd);
+    nextinnovation::cubic(qt, qta, qtb, qtc, qtd);
+    nextinnovation::cubic(qr, qra, qrb, qrc, qrd);
 
     qt1 = Eigen::VectorXd::Zero(n + 1), qr1 = Eigen::VectorXd::Zero(n + 1),
     qt2 = Eigen::VectorXd::Zero(n + 1), qr2 = Eigen::VectorXd::Zero(n + 1);
@@ -374,126 +356,6 @@ class Topp {
     log_debug("Setting up TOPP problem[6/] linear equality constraints initialized, %d/%d.", n_eq_cnt, n_eq);
 
     /**
-     * initialize linear inequality constraints
-     */
-    n_ineq = 16 * n + 8;
-    int n_ineq_cnt = 0;
-    P = Eigen::SparseMatrix<double>(n_ineq, n_var);
-    q = Eigen::SparseVector<double>(n_ineq);
-
-    /**
-     * always forward
-     * -b_k <= 0
-     * -c_k <= 0
-     */
-    for (int i = 0; i <= n; ++i) {
-      P.insert(n_ineq_cnt, getB(i)) = -1;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = -1;
-      ++n_ineq_cnt;
-    }
-
-    /**
-     * velocity constraints
-     * q'_t(s_k)^2 * b_k <= vt_max^2
-     * q'_r(s_k)^2 * b_k <= vr_max^2
-     * q'_t(s_k) * c_k <= vt_max
-     * q'_r(s_k) * c_k <= vr_max
-     * -q'_t(s_k) * c_k <= vt_max
-     * -q'_r(s_k) * c_k <= vr_max
-     */
-    for (int i = 0; i <= n; ++i) {
-      P.insert(n_ineq_cnt, getB(i)) = qt1(i) * qt1(i);
-      q.insert(n_ineq_cnt) = ELEVATOR_VMAX * ELEVATOR_VMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getB(i)) = qr1(i) * qr1(i);
-      q.insert(n_ineq_cnt) = ARM_VMAX * ARM_VMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = qt1(i);
-      q.insert(n_ineq_cnt) = ELEVATOR_VMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = qr1(i);
-      q.insert(n_ineq_cnt) = ARM_VMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = -qt1(i);
-      q.insert(n_ineq_cnt) = ELEVATOR_VMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = -qr1(i);
-      q.insert(n_ineq_cnt) = ARM_VMAX;
-      ++n_ineq_cnt;
-    }
-
-    /**
-     * acceleration constraints
-     * +q''_t(s_k)^2 * b_k + q'_t(s_k) * a_k <= at_max
-     * -q''_t(s_k)^2 * b_k - q'_t(s_k) * a_k <= at_max
-     * +q''_r(s_k)^2 * b_k + q'_r(s_k) * a_k <= ar_max
-     * -q''_r(s_k)^2 * b_k - q'_r(s_k) * a_k <= ar_max
-     */
-    for (int i = 0; i < n; ++i) {
-      P.insert(n_ineq_cnt, getB(i)) = qt2(i) * qt2(i);
-      P.insert(n_ineq_cnt, getA(i)) = qt1(i);
-      q.insert(n_ineq_cnt) = ELEVATOR_AMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getB(i)) = -qt2(i) * qt2(i);
-      P.insert(n_ineq_cnt, getA(i)) = -qt1(i);
-      q.insert(n_ineq_cnt) = ELEVATOR_AMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getB(i)) = qr2(i) * qr2(i);
-      P.insert(n_ineq_cnt, getA(i)) = qr1(i);
-      q.insert(n_ineq_cnt) = ARM_AMAX;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getB(i)) = -qr2(i) * qr2(i);
-      P.insert(n_ineq_cnt, getA(i)) = -qr1(i);
-      q.insert(n_ineq_cnt) = ARM_AMAX;
-      ++n_ineq_cnt;
-    }
-
-    /**
-     * voltage constraints
-     * +Kv * q'_t(s_k) * c_k + Ka * q''_t(s_k) * a_k + Ka * q'_t(s_k) * b_k <= V_max
-     * -Kv * q'_t(s_k) * c_k - Ka * q''_t(s_k) * a_k - Ka * q'_t(s_k) * b_k <= V_max
-     * +Kv * q'_r(s_k) * c_k + Ka * q''_r(s_k) * a_k + Ka * q'_r(s_k) * b_k <= V_max
-     * -Kv * q'_r(s_k) * c_k - Ka * q''_r(s_k) * a_k - Ka * q'_r(s_k) * b_k <= V_max
-     */
-    for (int i = 0; i < n; ++i) {
-      P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_Kv * qt1(i);
-      P.insert(n_ineq_cnt, getA(i)) = ELEVATOR_Ka * qt2(i);
-      P.insert(n_ineq_cnt, getB(i)) = ELEVATOR_Ka * qt1(i);
-      q.insert(n_ineq_cnt) = ELEVATOR_MAX_VOLTAGE;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = -ELEVATOR_Kv * qt1(i);
-      P.insert(n_ineq_cnt, getA(i)) = -ELEVATOR_Ka * qt2(i);
-      P.insert(n_ineq_cnt, getB(i)) = -ELEVATOR_Ka * qt1(i);
-      q.insert(n_ineq_cnt) = ELEVATOR_MAX_VOLTAGE;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = ARM_Kv * qr1(i);
-      P.insert(n_ineq_cnt, getA(i)) = ARM_Ka * qr2(i);
-      P.insert(n_ineq_cnt, getB(i)) = ARM_Ka * qr1(i);
-      q.insert(n_ineq_cnt) = ARM_MAX_VOLTAGE;
-      ++n_ineq_cnt;
-
-      P.insert(n_ineq_cnt, getC(i)) = -ARM_Kv * qr1(i);
-      P.insert(n_ineq_cnt, getA(i)) = -ARM_Ka * qr2(i);
-      P.insert(n_ineq_cnt, getB(i)) = -ARM_Ka * qr1(i);
-      q.insert(n_ineq_cnt) = ARM_MAX_VOLTAGE;
-      ++n_ineq_cnt;
-    }
-
-    log_debug("Setting up TOPP problem[7/] linear inequality constraints initialized, %d/%d.", n_ineq_cnt, n_ineq);
-
-    /**
      * initialize quadratic equality constraints
      */
     n_quadeq = n + 1;
@@ -513,7 +375,88 @@ class Topp {
       n_quadeq_cnt += 1;
     }
 
-    log_debug("Setting up TOPP problem[8/] quadratic equality constraints initialized, %d/%d.", n_quadeq_cnt, n_quadeq);
+    log_debug("Setting up TOPP problem[7/] quadratic equality constraints initialized, %d/%d.", n_quadeq_cnt, n_quadeq);
+
+    /**
+     * initialize linear inequality constraints
+     */
+    n_ineq = 10 * n + 2;
+    int n_ineq_cnt = 0;
+    P = Eigen::SparseMatrix<double>(n_ineq, n_var);
+    q = Eigen::SparseVector<double>(n_ineq);
+
+    /**
+     * always forward
+     * -b_k <= 0
+     * -c_k <= 0
+     */
+    for (int i = 0; i <= n; ++i) {
+      P.insert(n_ineq_cnt, getB(i)) = -1;
+      ++n_ineq_cnt;
+
+      P.insert(n_ineq_cnt, getC(i)) = -1;
+      ++n_ineq_cnt;
+    }
+
+    /**
+     * voltage constraints
+     */
+    for (int i = 0; i < n; ++i) {
+      P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getA(i)) = ELEVATOR_Ka * qt2(i);
+      P.insert(n_ineq_cnt, getB(i)) = ELEVATOR_Ka * qt1(i);
+      q.insert(n_ineq_cnt) = ELEVATOR_V_MAX - ELEVATOR_Kg - ELEVATOR_Ks * sign(qt1(i));
+      ++n_ineq_cnt;
+
+      P.insert(n_ineq_cnt, getC(i)) = -ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getA(i)) = -ELEVATOR_Ka * qt2(i);
+      P.insert(n_ineq_cnt, getB(i)) = -ELEVATOR_Ka * qt1(i);
+      q.insert(n_ineq_cnt) = ELEVATOR_V_MAX + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i));
+      ++n_ineq_cnt;
+
+      P.insert(n_ineq_cnt, getC(i)) = ARM_Kv * qr1(i);
+      P.insert(n_ineq_cnt, getA(i)) = ARM_Ka * qr2(i);
+      P.insert(n_ineq_cnt, getB(i)) = ARM_Ka * qr1(i);
+      q.insert(n_ineq_cnt) = ARM_V_MAX - ARM_Kg * cos(qr(i)) - ARM_Ks * sign(qr1(i));
+      ++n_ineq_cnt;
+
+      P.insert(n_ineq_cnt, getC(i)) = -ARM_Kv * qr1(i);
+      P.insert(n_ineq_cnt, getA(i)) = -ARM_Ka * qr2(i);
+      P.insert(n_ineq_cnt, getB(i)) = -ARM_Ka * qr1(i);
+      q.insert(n_ineq_cnt) = ARM_V_MAX + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i));
+      ++n_ineq_cnt;
+    }
+
+    /**
+     * current constraints
+     */
+    for (int i = 0; i < n; ++i) {
+      P.insert(n_ineq_cnt, getC(i)) = -ELEVATOR_METTER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getA(i)) = ELEVATOR_Ka * qt2(i);
+      P.insert(n_ineq_cnt, getB(i)) = ELEVATOR_Ka * qt1(i);
+      q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R - ELEVATOR_Kg - ELEVATOR_Ks * sign(qt1(i));
+      ++n_ineq_cnt;
+
+      P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_METTER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv - ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getA(i)) = -ELEVATOR_Ka * qt2(i);
+      P.insert(n_ineq_cnt, getB(i)) = -ELEVATOR_Ka * qt1(i);
+      q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i));
+      ++n_ineq_cnt;
+
+      P.insert(n_ineq_cnt, getC(i)) = -ARM_RADIAN_2_MOTOR_RADIAN * ARM_R * qr1(i) / ARM_Kv + ARM_Kv * qr1(i);
+      P.insert(n_ineq_cnt, getA(i)) = ARM_Ka * qr2(i);
+      P.insert(n_ineq_cnt, getB(i)) = ARM_Ka * qr1(i);
+      q.insert(n_ineq_cnt) = ARM_I_MAX * ARM_R - ARM_Kg * cos(qr(i)) - ARM_Ks * sign(qr1(i));
+      ++n_ineq_cnt;
+
+      P.insert(n_ineq_cnt, getC(i)) = ARM_RADIAN_2_MOTOR_RADIAN * ARM_R * qr1(i) / ARM_Kv - ARM_Kv * qr1(i);
+      P.insert(n_ineq_cnt, getA(i)) = -ARM_Ka * qr2(i);
+      P.insert(n_ineq_cnt, getB(i)) = -ARM_Ka * qr1(i);
+      q.insert(n_ineq_cnt) = ARM_I_MAX * ARM_R + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i));
+      ++n_ineq_cnt;
+    }
+
+    log_debug("Setting up TOPP problem[8/] linear inequality constraints initialized, %d/%d.", n_ineq_cnt, n_ineq);
 
     // initialize dual variables
     mus = std::vector<Eigen::VectorXd>(n_soc, Eigen::VectorXd::Zero(3));
@@ -579,5 +522,6 @@ class Topp {
     return 3 * n + 2 + i;
   }
 };
+};  // namespace nextinnovation
 
 #endif

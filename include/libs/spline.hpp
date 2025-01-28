@@ -1,11 +1,11 @@
 #ifndef SPLINE_HPP
 #define SPLINE_HPP
 
-#include <algorithm>
 #include <Eigen/Eigen>
 #include <Eigen/Sparse>
+#include <algorithm>
 
-namespace spline {
+namespace nextinnovation {
 void cubic(const Eigen::VectorXd& x, Eigen::VectorXd& a, Eigen::VectorXd& b,
            Eigen::VectorXd& c, Eigen::VectorXd& d) {
   int n = x.size() - 1;
@@ -30,5 +30,5 @@ void cubic(const Eigen::VectorXd& x, Eigen::VectorXd& a, Eigen::VectorXd& b,
   d = x.segment(0, n);
   return;
 }
-}  // namespace spline
+}  // namespace nextinnovation
 #endif

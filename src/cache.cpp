@@ -17,7 +17,7 @@ using com::nextinnovation::armtrajectoryservice::Response;
 using grpc::Channel;
 using grpc::ClientContext;
 
-using namespace config::alphabot;
+using namespace nextinnovation::alphabot;
 
 class Client {
  public:
@@ -71,7 +71,7 @@ int main() {
           log_info("Sending request: start(%.2f, %.2f), end(%.2f, %.2f), algae(%d), coral(%d)",
                    i, j, t, r,
                    request->hasalgae(), request->hascoral());
-          Client("localhost:" + config::params::GRPC_PORT, *request);
+          Client("localhost:" + nextinnovation::nextinnovation::GRPC_PORT, *request);
         }
       }
     }

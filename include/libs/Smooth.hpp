@@ -8,7 +8,7 @@
 #include "lbfgs.hpp"
 
 #define GRAD_GAP 1e-20
-
+namespace nextinnovation {
 class Smooth {
  private:
   int n;
@@ -133,5 +133,6 @@ class Smooth {
     return;
   }
 };
+};  // namespace nextinnovation
 
 #endif  // SMOOTH_HPP

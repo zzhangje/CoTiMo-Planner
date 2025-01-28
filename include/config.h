@@ -4,7 +4,7 @@
 #include <cmath>
 #include <string>
 
-namespace config {
+namespace nextinnovation {
 
 constexpr double toRadians(double degree) { return degree / 180 * M_PI; }
 
@@ -29,10 +29,10 @@ constexpr int constexprFloor(double x) {
   return (x < 0) ? static_cast<int>(x) - 1 : static_cast<int>(x);
 }
 
-namespace params {
+namespace config {
 const std::string GRPC_PORT = "58214";
 const bool IS_DEBUG = true;
-}  // namespace params
+}  // namespace config
 
 namespace alphabot {
 const std::string ROBOT_PARAMS_VERSION =
@@ -56,50 +56,42 @@ constexpr double ELEVATOR_SIN_ANGLE =
     constexprSin(toRadians(ELEVATOR_2_GROUND_ANGLE));
 constexpr double ELEVATOR_COS_ANGLE =
     constexprCos(toRadians(ELEVATOR_2_GROUND_ANGLE));
-constexpr double ELEVATOR_MIN_POSITION_METER = 0;
-constexpr double ELEVATOR_MAX_POSITION_METER = 2.0;
-constexpr double ARM_MIN_THETA_DEGREE = 0;
-constexpr double ARM_MAX_THETA_DEGREE = 350;
 
 // the properties of the elevator motor
-// constexpr double ELEVATOR_Kv = 50.8;
-constexpr double ELEVATOR_Kv = .001;
-constexpr double ELEVATOR_Ka = .001;
-constexpr double ELEVATOR_MAX_RPS = 0x3f3f3f3f;
-constexpr double ELEVATOR_MAX_RPSS = 0x3f3f3f3f;
-constexpr double ELEVATOR_REDUCTION = 1.0;
-constexpr double ELEVATOR_ROUNDS_2_POSITION = 1.0;
+const double ELEVATOR_MIN_POSITION_METER = 0;
+const double ELEVATOR_MAX_POSITION_METER = 2.0;
+const double ELEVATOR_V_MAX = 12;
+const double ELEVATOR_I_MAX = 25;
+const double ELEVATOR_Kg = .001;
+const double ELEVATOR_Ks = .001;
+const double ELEVATOR_Kv = .001;
+const double ELEVATOR_Ka = .001;
+const double ELEVATOR_R = 10;
+const double ELEVATOR_METER_2_MOTOR_RADIAN = 1.0;
 
 // the properties of the arm motor
-// constexpr double ARM_Kv = 50.8;
-constexpr double ARM_Kv = .001;
-constexpr double ARM_Ka = .001;
-constexpr double ARM_MAX_RPS = 0x3f3f3f3f;
-constexpr double ARM_MAX_RPSS = 0x3f3f3f3f;
-constexpr double ARM_REDUCTION = 1.0;
-constexpr double ARM_ROUNDS_2_DEGREE = 360.0;
-
-// the limit of the motor
-constexpr double ELEVATOR_MAX_VOLTAGE = 12;
-constexpr double ELEVATOR_VMAX =
-    ELEVATOR_MAX_RPS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
-constexpr double ELEVATOR_AMAX =
-    ELEVATOR_MAX_RPSS / ELEVATOR_REDUCTION * ELEVATOR_ROUNDS_2_POSITION;
-constexpr double ARM_MAX_VOLTAGE = 12;
-constexpr double ARM_VMAX = ARM_MAX_RPS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
-constexpr double ARM_AMAX = ARM_MAX_RPSS / ARM_REDUCTION * ARM_ROUNDS_2_DEGREE;
+constexpr double ARM_MIN_THETA_DEGREE = 0;
+constexpr double ARM_MAX_THETA_DEGREE = 350;
+constexpr double ARM_MIN_THETA_RADIAN = toRadians(ARM_MIN_THETA_DEGREE);
+constexpr double ARM_MAX_THETA_RADIAN = toRadians(ARM_MAX_THETA_DEGREE);
+const double ARM_V_MAX = 12;
+const double ARM_I_MAX = 25;
+const double ARM_Kg = .001;
+const double ARM_Ks = .001;
+const double ARM_Kv = .001;
+const double ARM_Ka = .001;
+const double ARM_R = 10;
+const double ARM_RADIAN_2_MOTOR_RADIAN = 1.0;
 
 // the properties of the grid map
 constexpr double ELEVATOR_GRID_SIZE = .01;
-constexpr double ARM_GRID_SIZE = 2.;
+constexpr double ARM_GRID_SIZE = .01;
 constexpr int ELEVATOR_GRID_NUMS =
     constexprFloor((ELEVATOR_MAX_POSITION_METER - ELEVATOR_MIN_POSITION_METER) /
-                   ELEVATOR_GRID_SIZE) +
-    1;
+                   ELEVATOR_GRID_SIZE);
 constexpr int ARM_GRID_NUMS =
-    constexprFloor((ARM_MAX_THETA_DEGREE - ARM_MIN_THETA_DEGREE) /
-                   ARM_GRID_SIZE) +
-    1;
+    constexprFloor((ARM_MAX_THETA_RADIAN - ARM_MIN_THETA_RADIAN) /
+                   ARM_GRID_SIZE);
 };  // namespace alphabot
 
 namespace env {
@@ -153,6 +145,6 @@ constexpr double ALGAE_RADIUS = 0.41;
 constexpr double ALGAE_LOW_CENTER_X = ALGAE_HIGH_CENTER_X;
 };  // namespace env
 
-};  // namespace config
+};  // namespace nextinnovation
 
 #endif  // CONFIG_H

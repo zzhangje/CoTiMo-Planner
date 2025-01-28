@@ -9,8 +9,8 @@
 #include "config.h"
 #include "log.hpp"
 
-using namespace config::alphabot;
-
+using namespace nextinnovation::alphabot;
+namespace nextinnovation {
 double clamp(double x, double lowerBound, double upperBound) {
   if (x < lowerBound) return lowerBound;
   if (x > upperBound) return upperBound;
@@ -129,5 +129,6 @@ void getGridMap(ObjectType type, std::vector<std::vector<double>>& map) {
   }
   return;
 }
+}  // namespace nextinnovation
 
 #endif
