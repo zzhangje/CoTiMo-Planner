@@ -201,11 +201,12 @@ class Topp {
   double getLoss() {
     return loss(this, x, g);
   }
-  void getTrajectory(ArmTrajectory* trajectory) {
+  void getTrajectory(ArmTrajectory* trajectory, std::vector<Eigen::Vector2d>& voltage, std::vector<Eigen::Vector2d>& velocity) {
     Eigen::VectorXd ak = x.segment(getA(0), lenA());
     Eigen::VectorXd bk = x.segment(getB(0), lenB());
     Eigen::VectorXd ck = x.segment(getC(0), lenC());
     Eigen::VectorXd dk = x.segment(getD(0), lenD());
+    voltage.clear(), velocity.clear();
     ArmTrajectoryState* state;
     double t = 0;
 
@@ -224,6 +225,8 @@ class Topp {
       state->mutable_position()->set_elbowpositiondegree(points[i](1));
       state->mutable_current()->set_shoulderheightampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(i)) * ck(i) + ELEVATOR_Ka * qt2(i) * ak(i) + ELEVATOR_Ka * qt1(i) * bk(i) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i))) / ELEVATOR_R);
       state->mutable_current()->set_elbowpositionampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(i) / ARM_Kv + ARM_Kv * qr2(i)) * ck(i) + ARM_Ka * qr2(i) * ak(i) + ARM_Ka * qr1(i) * bk(i) + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i))) / ARM_R);
+      voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * qt2(i) * ak(i) + ELEVATOR_Ka * qt1(i) * bk(i) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i)), ARM_Kv * qr1(i) * ck(i) + ARM_Ka * qr2(i) * ak(i) + ARM_Ka * qr1(i) * bk(i) + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i))));
+      velocity.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i), ARM_Kv * qr1(i) * ck(i)));
       t += ARC_LEN * 2 / (ck(i) + ck(i + 1));
     }
 
@@ -233,6 +236,8 @@ class Topp {
     state->mutable_position()->set_elbowpositiondegree(points[n](1));
     state->mutable_current()->set_shoulderheightampere(((-ELEVATOR_METER_2_MOTOR_RADIAN * qt1(n) / ELEVATOR_Kv + ELEVATOR_Kv * qt2(n)) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(n))) / ELEVATOR_R);
     state->mutable_current()->set_elbowpositionampere(((-ARM_RADIAN_2_MOTOR_RADIAN * qr1(n) / ARM_Kv + ARM_Kv * qr2(n)) * ck(n) + ARM_Ka * qr1(n) * bk(n) + ARM_Kg * cos(qr(n)) + ARM_Ks * sign(qr1(n))) / ARM_R);
+    voltage.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n) + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(n)), ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n) + ARM_Kg * cos(qr(n)) + ARM_Ks * sign(qr1(n))));
+    velocity.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n), ARM_Kv * qr1(n) * ck(n)));
   }
 
  private:

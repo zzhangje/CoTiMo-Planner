@@ -51,6 +51,8 @@ using namespace nextinnovation::alphabot;
 
 // shared variables
 ArmTrajectory* g_trajectory = new ArmTrajectory();
+std::vector<Eigen::Vector2d>* g_voltage = new std::vector<Eigen::Vector2d>();
+std::vector<Eigen::Vector2d>* g_velocity = new std::vector<Eigen::Vector2d>();
 bool g_hasNewTrajectory = false;
 bool g_isRunning = true;
 std::mutex g_trajectoryMutex;
@@ -169,14 +171,23 @@ class Service final : public ArmTrajectoryService::Service {
 
     // generate the trajectory
     ArmTrajectory* trajectory = response->mutable_trajectory();
+    std::vector<Eigen::Vector2d> voltage, velocity;
     Topp topp(getTRs(sampledPath));
-    topp.getTrajectory(trajectory);
+    topp.getTrajectory(trajectory, voltage, velocity);
     *trajectory->mutable_parameter() = *request;
 
     // write the trajectory to the shared variable
     {
       std::unique_lock<std::mutex> lock(g_trajectoryMutex);
       g_trajectory->CopyFrom(*trajectory);
+      g_voltage->clear();
+      g_velocity->clear();
+      for (const Eigen::Vector2d& v : voltage) {
+        g_voltage->push_back(v);
+      }
+      for (const Eigen::Vector2d& v : velocity) {
+        g_velocity->push_back(v);
+      }
       g_hasNewTrajectory = true;
     }
 
