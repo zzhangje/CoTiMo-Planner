@@ -526,7 +526,7 @@ int main(int argc, char* argv[]) {
      * Window 4: 2D Projection
      */
     ImGui::Begin("2D Projection", nullptr, WINDOW_FLAGS);
-    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)", ImVec2(-1, 400))) {
+    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)", ImVec2(-1, 400), ImPlotFlags_Equal)) {
       Object env = Object(ObjectType::ENV);
       Object arm = Object(armType).armTransform(simT, simR);
       Object exp = Object(expType).armTransform(simT, simR);
