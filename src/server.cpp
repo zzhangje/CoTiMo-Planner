@@ -203,7 +203,7 @@ class Service final : public ArmTrajectoryService::Service {
       }
     }
     log_info("Found a path with %d points.", path.size());
-    nextinnovation::samplePath(path, sampledPath, 17);
+    nextinnovation::samplePath(path, sampledPath, 30);
     sampledPath = path;
 
     // generate the trajectory
@@ -486,7 +486,7 @@ int main(int argc, char* argv[]) {
     if (velocity.size() > 0 && trajectory.states_size() > 0 && voltage.size() > 0) {
       if (ImPlot::BeginPlot("Current")) {
         ImPlot::SetupAxes("Time (s)", "Current (A)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ARM_I_MAX, 1.2 * ARM_I_MAX);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_I_MAX, 1.3 * ARM_I_MAX);
         double* elbowCurrentT = new double[trajectory.states_size()];
         double* shoulderCurrentT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
@@ -506,7 +506,7 @@ int main(int argc, char* argv[]) {
       }
       if (ImPlot::BeginPlot("Voltage")) {
         ImPlot::SetupAxes("Time (s)", "Voltage (V)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ARM_V_MAX, 1.2 * ARM_V_MAX);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_V_MAX, 1.3 * ARM_V_MAX);
         double* elbowVoltageT = new double[trajectory.states_size()];
         double* shoulderVoltageT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
@@ -539,7 +539,7 @@ int main(int argc, char* argv[]) {
           }
           timestamp[i] = trajectory.states(i).timestamp();
         }
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.2 * minVelocity, 1.2 * maxVelocity);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
         ImPlot::PlotLine("Shoulder Velocity", timestamp, velocityT, trajectory.states_size());
         ImPlot::EndPlot();
       }
@@ -558,7 +558,7 @@ int main(int argc, char* argv[]) {
           }
           timestamp[i] = trajectory.states(i).timestamp();
         }
-        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.2 * minVelocity, 1.2 * maxVelocity);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
         ImPlot::PlotLine("Elbow Velocity", timestamp, velocityT, trajectory.states_size());
         ImPlot::EndPlot();
       }

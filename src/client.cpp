@@ -30,7 +30,7 @@ class Client {
 
         // print the trajectory
         for (const ArmTrajectoryState& state : states) {
-          log_info("t=%.3f, h=%.2f, theta=%.2f, I_h=%.2f, I_theta=%.2f",
+          log_info("t=%.3f, h=%.2f, θ=%.2f, I_h=%.2f, I_Θ=%.2f",
                    state.timestamp(),
                    state.position().shoulderheightmeter(),
                    state.position().elbowpositionradian(),
@@ -62,7 +62,7 @@ int main() {
     std::cin >> shoulderHeight;
     request->mutable_start()->set_shoulderheightmeter(shoulderHeight);
 
-    std::cout << "$ Please enter the elbow position in degrees, (" << ARM_MIN_THETA_RADIAN << ',' << ARM_MAX_THETA_RADIAN << "): ";
+    std::cout << "$ Please enter the elbow position in radians, (" << ARM_MIN_THETA_RADIAN << ',' << ARM_MAX_THETA_RADIAN << "): ";
     double elbowPosition;
     std::cin >> elbowPosition;
     request->mutable_start()->set_elbowpositionradian(elbowPosition);
@@ -72,7 +72,7 @@ int main() {
     std::cin >> endShoulderHeight;
     request->mutable_end()->set_shoulderheightmeter(endShoulderHeight);
 
-    std::cout << "$ Please enter the end elbow position in degrees, (" << ARM_MIN_THETA_RADIAN << ',' << ARM_MAX_THETA_RADIAN << "): ";
+    std::cout << "$ Please enter the end elbow position in raidnas, (" << ARM_MIN_THETA_RADIAN << ',' << ARM_MAX_THETA_RADIAN << "): ";
     double endElbowPosition;
     std::cin >> endElbowPosition;
     request->mutable_end()->set_elbowpositionradian(endElbowPosition);

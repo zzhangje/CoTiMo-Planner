@@ -88,10 +88,12 @@ constexpr double ELEVATOR_GRID_SIZE = .01;
 constexpr double ARM_GRID_SIZE = .01;
 constexpr int ELEVATOR_GRID_NUMS =
     constexprFloor((ELEVATOR_MAX_POSITION_METER - ELEVATOR_MIN_POSITION_METER) /
-                   ELEVATOR_GRID_SIZE);
+                   ELEVATOR_GRID_SIZE) +
+    1;
 constexpr int ARM_GRID_NUMS =
     constexprFloor((ARM_MAX_THETA_RADIAN - ARM_MIN_THETA_RADIAN) /
-                   ARM_GRID_SIZE);
+                   ARM_GRID_SIZE) +
+    1;
 };  // namespace alphabot
 
 namespace env {

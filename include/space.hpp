@@ -29,8 +29,8 @@ Eigen::Vector2i getGridIdx(const double t, const double r) {
           (clamp(t, ELEVATOR_MIN_POSITION_METER, ELEVATOR_MAX_POSITION_METER) -
            ELEVATOR_MIN_POSITION_METER) /
           ELEVATOR_GRID_SIZE),
-      floor((clamp(r, ARM_MIN_THETA_DEGREE, ARM_MAX_THETA_DEGREE) -
-             ARM_MIN_THETA_DEGREE) /
+      floor((clamp(r, ARM_MIN_THETA_RADIAN, ARM_MAX_THETA_RADIAN) -
+             ARM_MIN_THETA_RADIAN) /
             ARM_GRID_SIZE));
 }
 
@@ -49,7 +49,7 @@ std::vector<Eigen::Vector2i> getGridIdxs(
 
 Eigen::Vector2d getTR(const int t, const int r) {
   return Eigen::Vector2d(t * ELEVATOR_GRID_SIZE + ELEVATOR_MIN_POSITION_METER,
-                         r * ARM_GRID_SIZE + ARM_MIN_THETA_DEGREE);
+                         r * ARM_GRID_SIZE + ARM_MIN_THETA_RADIAN);
 }
 
 Eigen::Vector2d getTR(const Eigen::Vector2i& idx) {

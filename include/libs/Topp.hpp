@@ -405,6 +405,7 @@ class Topp {
 
     /**
      * voltage constraints
+     * Kg + Ks * sign(ω) + Kv * ω + Ka * α <= Vmax
      */
     for (int i = 0; i < n; ++i) {
       P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_Kv * qt1(i);
@@ -434,27 +435,28 @@ class Topp {
 
     /**
      * current constraints
+     * - ω / Kv + V <= Imax * R
      */
     for (int i = 0; i < n; ++i) {
-      P.insert(n_ineq_cnt, getC(i)) = -ELEVATOR_METER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getC(i)) = -ELEVATOR_METER_2_MOTOR_RADIAN * qt1(i) / ELEVATOR_Kv + ELEVATOR_Kv * qt1(i);
       P.insert(n_ineq_cnt, getA(i)) = ELEVATOR_Ka * qt2(i);
       P.insert(n_ineq_cnt, getB(i)) = ELEVATOR_Ka * qt1(i);
       q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R - ELEVATOR_Kg - ELEVATOR_Ks * sign(qt1(i));
       ++n_ineq_cnt;
 
-      P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_METER_2_MOTOR_RADIAN * ELEVATOR_R * qt1(i) / ELEVATOR_Kv - ELEVATOR_Kv * qt1(i);
+      P.insert(n_ineq_cnt, getC(i)) = ELEVATOR_METER_2_MOTOR_RADIAN * qt1(i) / ELEVATOR_Kv - ELEVATOR_Kv * qt1(i);
       P.insert(n_ineq_cnt, getA(i)) = -ELEVATOR_Ka * qt2(i);
       P.insert(n_ineq_cnt, getB(i)) = -ELEVATOR_Ka * qt1(i);
       q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i));
       ++n_ineq_cnt;
 
-      P.insert(n_ineq_cnt, getC(i)) = -ARM_RADIAN_2_MOTOR_RADIAN * ARM_R * qr1(i) / ARM_Kv + ARM_Kv * qr1(i);
+      P.insert(n_ineq_cnt, getC(i)) = -ARM_RADIAN_2_MOTOR_RADIAN * qr1(i) / ARM_Kv + ARM_Kv * qr1(i);
       P.insert(n_ineq_cnt, getA(i)) = ARM_Ka * qr2(i);
       P.insert(n_ineq_cnt, getB(i)) = ARM_Ka * qr1(i);
       q.insert(n_ineq_cnt) = ARM_I_MAX * ARM_R - ARM_Kg * cos(qr(i)) - ARM_Ks * sign(qr1(i));
       ++n_ineq_cnt;
 
-      P.insert(n_ineq_cnt, getC(i)) = ARM_RADIAN_2_MOTOR_RADIAN * ARM_R * qr1(i) / ARM_Kv - ARM_Kv * qr1(i);
+      P.insert(n_ineq_cnt, getC(i)) = ARM_RADIAN_2_MOTOR_RADIAN * qr1(i) / ARM_Kv - ARM_Kv * qr1(i);
       P.insert(n_ineq_cnt, getA(i)) = -ARM_Ka * qr2(i);
       P.insert(n_ineq_cnt, getB(i)) = -ARM_Ka * qr1(i);
       q.insert(n_ineq_cnt) = ARM_I_MAX * ARM_R + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i));
