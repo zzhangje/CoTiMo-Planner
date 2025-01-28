@@ -96,9 +96,10 @@ enum class LogLevel {
 
 void ShowLog(LogLevel level, const char* format, ...) {
   static const std::unordered_map<LogLevel, std::pair<ImVec4, const char*>> logConfig = {
-      {LogLevel::LOG_INFO, {{0.0f, 1.0f, 0.0f, 1.0f}, "INFO "}},
-      {LogLevel::LOG_WARN, {{1.0f, 1.0f, 0.0f, 1.0f}, "WARN "}},
-      {LogLevel::LOG_ERROR, {{1.0f, 0.0f, 0.0f, 1.0f}, "ERROR"}}};
+    {LogLevel::LOG_INFO,  {{0.0f, 1.0f, 0.0f, 1.0f}, "INFO "}},
+    {LogLevel::LOG_WARN,  {{1.0f, 1.0f, 0.0f, 1.0f}, "WARN "}},
+    {LogLevel::LOG_ERROR, {{1.0f, 0.0f, 0.0f, 1.0f}, "ERROR"}}
+  };
 
   va_list args;
   va_start(args, format);
@@ -243,6 +244,11 @@ int main(int argc, char* argv[]) {
   // CompatibleFreeConsole();
 
   log_set_quiet(false);
+
+  ShowInfo("I'm Info");
+  ShowWarn("I'm Warn");
+  ShowError("I'm Error");
+  
   ShowInfo("Welcome to Cyber Planner 2025");
   log_info(
       "Welcome to Cyber Planner 2025!"
@@ -312,7 +318,7 @@ int main(int argc, char* argv[]) {
   int simIndex = 0;
   auto simStart = std::chrono::high_resolution_clock::now();
   io.IniFilename = "imgui.ini";
-
+  
   // main loop
   while (!glfwWindowShouldClose(window)) {
     if (!serverThread.joinable()) {
