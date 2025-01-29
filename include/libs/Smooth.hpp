@@ -64,23 +64,29 @@ class Smooth {
 
     // smoothness potential field
     for (int i = 0; i < smooth->n - 1; ++i) {
-      res += pow(optX(i) - optX(i + 1), 2) + pow(optX(i + smooth->n) - optX(i + smooth->n + 1), 2);
+      double d = pow(optX(i) - optX(i + 1), 2);
+      optG(i) += 2 * d;
+      optG(i + 1) += -2 * d;
+      res += d;
 
-      optG(i) += 2 * (optX(i) - optX(i + 1));
-      optG(i + 1) += -2 * (optX(i) - optX(i + 1));
-      optG(i + smooth->n) += 2 * (optX(i + smooth->n) - optX(i + smooth->n + 1));
-      optG(i + smooth->n + 1) += -2 * (optX(i + smooth->n) - optX(i + smooth->n + 1));
+      d = pow(optX(i + smooth->n) - optX(i + smooth->n + 1), 2);
+      optG(i + smooth->n) += 2 * d;
+      optG(i + smooth->n + 1) += -2 * d;
+      res += d;
     }
 
     for (int i = 1; i < smooth->n - 1; ++i) {
-      res += pow(optX(i - 1) - 2 * optX(i) + optX(i + 1), 2) + pow(optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1), 2);
+      double d = pow(optX(i - 1) - 2 * optX(i) + optX(i + 1), 2);
+      optG(i - 1) += 2 * d;
+      optG(i) += -4 * d;
+      optG(i + 1) += 2 * d;
+      res += d;
 
-      optG(i - 1) += 2 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
-      optG(i) += -4 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
-      optG(i + 1) += 2 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
-      optG(i + smooth->n - 1) += 2 * (optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1));
-      optG(i + smooth->n) += -4 * (optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1));
-      optG(i + smooth->n + 1) += 2 * (optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1));
+      d = pow(optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1), 2);
+      optG(i + smooth->n - 1) += 2 * d;
+      optG(i + smooth->n) += -4 * d;
+      optG(i + smooth->n + 1) += 2 * d;
+      res += d;
     }
 
     // penalty potential field
