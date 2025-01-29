@@ -63,18 +63,37 @@ class Smooth {
     // }
 
     // smoothness potential field
-    for (int i = 1; i < smooth->n - 1; ++i) {
-      res += pow(optX(i - 1) - 2 * optX(i) + optX(i + 1), 2);
-      res += pow(optX(i + smooth->n) - 2 * optX(i - 1 + smooth->n) + optX(i - 2 + smooth->n), 2);
+    for (int i = 0; i < smooth->n - 1; ++i) {
+      res += pow(optX(i) - optX(i + 1), 2) + pow(optX(i + smooth->n) - optX(i + smooth->n + 1), 2);
 
-      if (i > 1) {
-        optG(i - 1) += 2 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
-      }
-      if (i < smooth->n - 2) {
-        optG(i + 1) += 2 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
-      }
-      optG(i) += -4 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
+      optG(i) += 2 * (optX(i) - optX(i + 1));
+      optG(i + 1) += -2 * (optX(i) - optX(i + 1));
+      optG(i + smooth->n) += 2 * (optX(i + smooth->n) - optX(i + smooth->n + 1));
+      optG(i + smooth->n + 1) += -2 * (optX(i + smooth->n) - optX(i + smooth->n + 1));
     }
+
+    for (int i = 1; i < smooth->n - 1; ++i) {
+      res += pow(optX(i - 1) - 2 * optX(i) + optX(i + 1), 2) + pow(optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1), 2);
+
+      optG(i - 1) += 2 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
+      optG(i) += -4 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
+      optG(i + 1) += 2 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
+      optG(i + smooth->n - 1) += 2 * (optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1));
+      optG(i + smooth->n) += -4 * (optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1));
+      optG(i + smooth->n + 1) += 2 * (optX(i + smooth->n - 1) - 2 * optX(i + smooth->n) + optX(i + smooth->n + 1));
+    }
+
+    // penalty potential field
+    for (int i = 1; i < smooth->n - 1; ++i) {
+      res += .5 * (pow(optX(i) - smooth->x0(i), 2) + pow(optX(i + smooth->n) - smooth->x0(i + smooth->n), 2));
+      optG(i) += (optX(i) - smooth->x0(i));
+      optG(i + smooth->n) += (optX(i + smooth->n) - smooth->x0(i + smooth->n));
+    }
+
+    optG(0) = 0;
+    optG(smooth->n - 1) = 0;
+    optG(smooth->n) = 0;
+    optG(2 * smooth->n - 1) = 0;
 
     return res;
   }
