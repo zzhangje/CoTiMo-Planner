@@ -156,7 +156,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
         // current point has been visited
         if (g[next(0)][next(1)] > g[current(0)][current(1)] +
                                       grid_map[current(0)][current(1)] +
-                                      d.lpNorm<2>()) {
+                                      d.lpNorm<1>()) {
           // the new path is shorter
           g[next(0)][next(1)] = g[current(0)][current(1)] +
                                 grid_map[current(0)][current(1)] +

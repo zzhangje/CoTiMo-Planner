@@ -205,7 +205,7 @@ class Service final : public ArmTrajectoryService::Service {
       }
     }
     log_info("Found a path with %d points.", gridPath.size());
-    nextinnovation::samplePath(gridPath, sampledPath, 5);
+    nextinnovation::samplePath(gridPath, sampledPath, 15);
     std::vector<Eigen::Vector2d> path = nextinnovation::getTRs(sampledPath);
 
     // optimize the path

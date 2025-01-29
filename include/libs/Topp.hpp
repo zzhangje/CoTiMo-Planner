@@ -231,8 +231,8 @@ class Topp {
       state->mutable_position()->set_elbowpositionradian(points[i](1));
       velocity.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(i) * ck(i), ARM_Kv * qr1(i) * ck(i)));
       voltage.push_back(Eigen::Vector2d(ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i)) + ELEVATOR_Kv * qt1(i) * ck(i) + ELEVATOR_Ka * qt1(i) * bk(i) + ELEVATOR_Ka * qt2(i) * ak(i), ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i)) + ARM_Kv * qr1(i) * ck(i) + ARM_Ka * qr1(i) * bk(i) + ARM_Ka * qr2(i) * ak(i)));
-      state->mutable_current()->set_shouldercurrentampere(-1 / ELEVATOR_Kv / ELEVATOR_R * ELEVATOR_METER_2_MOTOR_RADIAN * velocity[i].x() + voltage[i].x() / ELEVATOR_R);
-      state->mutable_current()->set_elbowcurrentampere(-1 / ARM_Kv / ARM_R * ARM_RADIAN_2_MOTOR_RADIAN * velocity[i].y() + voltage[i].y() / ARM_R);
+      state->mutable_current()->set_shouldercurrentampere(-ELEVATOR_Kv / ELEVATOR_R * velocity[i].x() + voltage[i].x() / ELEVATOR_R);
+      state->mutable_current()->set_elbowcurrentampere(-ARM_Kv / ARM_R * velocity[i].y() + voltage[i].y() / ARM_R);
     }
 
     state = trajectory->add_states();
@@ -241,8 +241,8 @@ class Topp {
     state->mutable_position()->set_elbowpositionradian(points[n](1));
     velocity.push_back(Eigen::Vector2d(ELEVATOR_Kv * qt1(n) * ck(n), ARM_Kv * qr1(n) * ck(n)));
     voltage.push_back(Eigen::Vector2d(ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(n)) + ELEVATOR_Kv * qt1(n) * ck(n) + ELEVATOR_Ka * qt1(n) * bk(n), ARM_Kg * cos(qr(n)) + ARM_Ks * sign(qr1(n)) + ARM_Kv * qr1(n) * ck(n) + ARM_Ka * qr1(n) * bk(n)));
-    state->mutable_current()->set_shouldercurrentampere(-1 / ELEVATOR_Kv / ELEVATOR_R * ELEVATOR_METER_2_MOTOR_RADIAN * velocity[n].x() + voltage[n].x() / ELEVATOR_R);
-    state->mutable_current()->set_elbowcurrentampere(-1 / ARM_Kv / ARM_R * ARM_RADIAN_2_MOTOR_RADIAN * velocity[n].y() + voltage[n].y() / ARM_R);
+    state->mutable_current()->set_shouldercurrentampere(-ELEVATOR_Kv / ELEVATOR_R * velocity[n].x() + voltage[n].x() / ELEVATOR_R);
+    state->mutable_current()->set_elbowcurrentampere(-ARM_Kv / ARM_R * velocity[n].y() + voltage[n].y() / ARM_R);
   }
 
  private:
@@ -445,28 +445,24 @@ class Topp {
 
     /**
      * current constraints
-     * - ω / Kv + V <= Imax * R
+     * - Kv * ω + V <= Imax * R
      */
     for (int i = 0; i < n; ++i) {
-      P.insert(n_ineq_cnt, getC(i)) = (-1 / ELEVATOR_Kv + ELEVATOR_Kv) * qt1(i);
       P.insert(n_ineq_cnt, getA(i)) = ELEVATOR_Ka * qt2(i);
       P.insert(n_ineq_cnt, getB(i)) = ELEVATOR_Ka * qt1(i);
       q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R - ELEVATOR_Kg - ELEVATOR_Ks * sign(qt1(i));
       ++n_ineq_cnt;
 
-      P.insert(n_ineq_cnt, getC(i)) = (+1 / ELEVATOR_Kv - ELEVATOR_Kv) * qt1(i);
       P.insert(n_ineq_cnt, getA(i)) = -ELEVATOR_Ka * qt2(i);
       P.insert(n_ineq_cnt, getB(i)) = -ELEVATOR_Ka * qt1(i);
       q.insert(n_ineq_cnt) = ELEVATOR_I_MAX * ELEVATOR_R + ELEVATOR_Kg + ELEVATOR_Ks * sign(qt1(i));
       ++n_ineq_cnt;
 
-      P.insert(n_ineq_cnt, getC(i)) = (-1 / ARM_Kv + ARM_Kv) * qr1(i);
       P.insert(n_ineq_cnt, getA(i)) = ARM_Ka * qr2(i);
       P.insert(n_ineq_cnt, getB(i)) = ARM_Ka * qr1(i);
       q.insert(n_ineq_cnt) = ARM_I_MAX * ARM_R - ARM_Kg * cos(qr(i)) - ARM_Ks * sign(qr1(i));
       ++n_ineq_cnt;
 
-      P.insert(n_ineq_cnt, getC(i)) = (+1 / ARM_Kv - ARM_Kv) * qr1(i);
       P.insert(n_ineq_cnt, getA(i)) = -ARM_Ka * qr2(i);
       P.insert(n_ineq_cnt, getB(i)) = -ARM_Ka * qr1(i);
       q.insert(n_ineq_cnt) = ARM_I_MAX * ARM_R + ARM_Kg * cos(qr(i)) + ARM_Ks * sign(qr1(i));
