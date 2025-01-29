@@ -12,7 +12,7 @@ namespace nextinnovation {
 class Smooth {
  private:
   int n;
-  Eigen::VectorXd x;  // [t0, t1, ..., tn, r0, r1, ..., rn]'
+  Eigen::VectorXd x, x0;  // [t0, t1, ..., tn, r0, r1, ..., rn]'
   std::vector<Eigen::Vector2d> path;
 
   Object arm, env;
@@ -28,6 +28,7 @@ class Smooth {
     this->path = heuristicPath;
     this->x = Eigen::VectorXd::Zero(2 * this->n);
     this->convertToVariables();
+    this->x0 = x;
 
     this->solve(maxIter);
   }
@@ -50,16 +51,16 @@ class Smooth {
     optG = Eigen::VectorXd::Zero(optX.size());
 
     // distance potential field
-    for (int i = 1; i < smooth->n - 1; ++i) {
-      double d = smooth->env.distanceToObject(
-          smooth->arm.armTransform(optX(i), optX(i + smooth->n)));
+    // for (int i = 1; i < smooth->n - 1; ++i) {
+    //   double d = smooth->env.distanceToObject(
+    //       smooth->arm.armTransform(optX(i), optX(i + smooth->n)));
 
-      res += exp(-d * 50);
+    //   res += exp(-d * 50);
 
-      optG(i) += -exp(-d * 50) * (smooth->env.distanceToObject(smooth->arm.armTransform(optX(i) + GRAD_GAP, optX(i + smooth->n))) - d) / GRAD_GAP;
+    //   optG(i) += -exp(-d * 50) * (smooth->env.distanceToObject(smooth->arm.armTransform(optX(i) + GRAD_GAP, optX(i + smooth->n))) - d) / GRAD_GAP;
 
-      optG(i + smooth->n) += -exp(-d) * (smooth->env.distanceToObject(smooth->arm.armTransform(optX(i), optX(i + smooth->n) + GRAD_GAP)) - d) / GRAD_GAP;
-    }
+    //   optG(i + smooth->n) += -exp(-d) * (smooth->env.distanceToObject(smooth->arm.armTransform(optX(i), optX(i + smooth->n) + GRAD_GAP)) - d) / GRAD_GAP;
+    // }
 
     // smoothness potential field
     for (int i = 1; i < smooth->n - 1; ++i) {

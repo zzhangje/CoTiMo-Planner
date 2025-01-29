@@ -17,6 +17,7 @@
 
 #include "Object.hpp"
 #include "Polygon.hpp"
+#include "Smooth.hpp"
 #include "Topp.hpp"
 #include "astar.hpp"
 #include "config.h"
@@ -61,6 +62,7 @@ using namespace nextinnovation::alphabot;
 ArmTrajectory* g_trajectory = new ArmTrajectory();
 std::vector<Eigen::Vector2d>* g_voltage = new std::vector<Eigen::Vector2d>();
 std::vector<Eigen::Vector2d>* g_velocity = new std::vector<Eigen::Vector2d>();
+std::vector<Eigen::Vector2d>* g_path = new std::vector<Eigen::Vector2d>();
 bool g_hasNewTrajectory = false;
 bool g_isRunning = true;
 std::mutex g_trajectoryMutex;
@@ -191,25 +193,29 @@ class Service final : public ArmTrajectoryService::Service {
     // find the path in the grid map
     std::vector<std::vector<double>> grid;
     getGridMap(expType, grid);
-    std::vector<Eigen::Vector2i> path, visited, sampledPath;
-    if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, path, visited)) {
+    std::vector<Eigen::Vector2i> gridPath, visited, sampledPath;
+    if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, gridPath, visited)) {
       log_warn("Failed to find a path in the expanded map.");
       ShowWarn("Failed to find a path in the expanded map.");
       getGridMap(armType, grid);
-      if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, path, visited)) {
+      if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, gridPath, visited)) {
         log_error("Failed to find a path in the original map.");
         ShowError("Failed to find a path in the original map.");
         return Status::CANCELLED;
       }
     }
-    log_info("Found a path with %d points.", path.size());
-    nextinnovation::samplePath(path, sampledPath, 5);
-    // sampledPath = path;
+    log_info("Found a path with %d points.", gridPath.size());
+    nextinnovation::samplePath(gridPath, sampledPath, 5);
+    std::vector<Eigen::Vector2d> path = nextinnovation::getTRs(sampledPath);
+
+    // optimize the path
+    nextinnovation::Smooth smooth(path, armType);
+    path = smooth.getPath();
 
     // generate the trajectory
     ArmTrajectory* trajectory = response->mutable_trajectory();
     std::vector<Eigen::Vector2d> voltage, velocity;
-    nextinnovation::Topp topp(nextinnovation::getTRs(sampledPath));
+    nextinnovation::Topp topp(path);
     topp.getTrajectory(trajectory, voltage, velocity);
     *trajectory->mutable_parameter() = *request;
 
@@ -219,11 +225,15 @@ class Service final : public ArmTrajectoryService::Service {
       g_trajectory->CopyFrom(*trajectory);
       g_voltage->clear();
       g_velocity->clear();
+      g_path->clear();
       for (const Eigen::Vector2d& v : voltage) {
         g_voltage->push_back(v);
       }
       for (const Eigen::Vector2d& v : velocity) {
         g_velocity->push_back(v);
+      }
+      for (const Eigen::Vector2d& p : nextinnovation::getTRs(sampledPath)) {
+        g_path->push_back(p);
       }
       g_hasNewTrajectory = true;
     }
@@ -329,7 +339,7 @@ int main(int argc, char* argv[]) {
   std::vector<Eigen::Vector2d> voltage, velocity;
 
   std::vector<std::vector<double>> emap, amap;
-  std::vector<Eigen::Vector2d> path;
+  std::vector<Eigen::Vector2d> path, astarPath;
   nextinnovation::ObjectType armType = nextinnovation::ObjectType::ARM;
   nextinnovation::ObjectType expType = nextinnovation::ObjectType::ARM_EXP;
   getGridMap(armType, amap);
@@ -352,16 +362,20 @@ int main(int argc, char* argv[]) {
 
     // handle new trajectory
     if (g_hasNewTrajectory) {
+      voltage.clear();
+      velocity.clear();
+      astarPath.clear();
       {
         g_hasNewTrajectory = false;
         trajectory.CopyFrom(*g_trajectory);
-        voltage.clear();
         for (const Eigen::Vector2d& v : *g_voltage) {
           voltage.push_back(v);
         }
-        velocity.clear();
         for (const Eigen::Vector2d& v : *g_velocity) {
           velocity.push_back(v);
+        }
+        for (const Eigen::Vector2d& p : *g_path) {
+          astarPath.push_back(p);
         }
       }
 
@@ -477,6 +491,14 @@ int main(int argc, char* argv[]) {
         trajY[i] = path[i](1);
       }
       ImPlot::PlotLine("trajectory", trajX, trajY, path.size());
+
+      double* astarX = new double[astarPath.size()];
+      double* astarY = new double[astarPath.size()];
+      for (int i = 0; i < astarPath.size(); ++i) {
+        astarX[i] = astarPath[i](0);
+        astarY[i] = astarPath[i](1);
+      }
+      ImPlot::PlotLine("astar", astarX, astarY, astarPath.size());
 
       double currentX[] = {simT};
       double currentY[] = {simR};
