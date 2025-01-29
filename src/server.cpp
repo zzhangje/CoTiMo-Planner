@@ -189,7 +189,7 @@ class Service final : public ArmTrajectoryService::Service {
     }
 
     // find the path in the grid map
-    std::vector<std::vector<bool>> grid;
+    std::vector<std::vector<double>> grid;
     getGridMap(expType, grid);
     std::vector<Eigen::Vector2i> path, visited, sampledPath;
     if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, path, visited)) {
@@ -328,10 +328,12 @@ int main(int argc, char* argv[]) {
   ArmTrajectory trajectory;
   std::vector<Eigen::Vector2d> voltage, velocity;
 
-  std::vector<std::vector<bool>> emap, amap;
+  std::vector<std::vector<double>> emap, amap;
   std::vector<Eigen::Vector2d> path;
   nextinnovation::ObjectType armType = nextinnovation::ObjectType::ARM;
   nextinnovation::ObjectType expType = nextinnovation::ObjectType::ARM_EXP;
+  getGridMap(armType, amap);
+  getGridMap(expType, emap);
   double simT = 0, simR = 0;
   int simIndex = 0;
   auto simStart = std::chrono::high_resolution_clock::now();
@@ -385,6 +387,10 @@ int main(int argc, char* argv[]) {
         path.push_back(Eigen::Vector2d(state.position().shoulderheightmeter(),
                                        state.position().elbowpositionradian()));
       }
+
+      // reset simulation
+      simIndex = 0;
+      simStart = std::chrono::high_resolution_clock::now();
     }
 
     // handle simulation
@@ -440,7 +446,7 @@ int main(int argc, char* argv[]) {
     ImGui::End();
 
     /**
-     * Window 2: Arm Trajectory
+     * Window 2: Configuration Space
      */
     ImGui::Begin("Arm Trajectory", nullptr, WINDOW_FLAGS);
     if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (rad)", ImVec2(-1, 400))) {
@@ -450,11 +456,11 @@ int main(int argc, char* argv[]) {
       std::vector<double> obsX, obsY, expX, expY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
-          if (amap[t][r]) {
+          if (amap[t][r] > 99.9) {
             Eigen::Vector2d tr = nextinnovation::getTR(t, r);
             obsX.push_back(tr(0));
             obsY.push_back(tr(1));
-          } else if (emap[t][r]) {
+          } else if (emap[t][r] > 99.9) {
             Eigen::Vector2d tr = nextinnovation::getTR(t, r);
             expX.push_back(tr(0));
             expY.push_back(tr(1));

@@ -5,11 +5,11 @@
 
 #include "log.hpp"
 
-#define OBSTACLE_OFFSET 100.0
-#define OBSTACLE_FIELD_REDUCTION 0.3
-#define ASTAR_HEURISTIC_COEFFICIENT 1.0
-
 namespace nextinnovation {
+#define OBSTACLE_OFFSET 100.0
+#define OBSTACLE_FIELD_REDUCTION 0.7
+#define ASTAR_HEURISTIC_COEFFICIENT 1e-3
+
 bool astar(const std::vector<std::vector<bool>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,
            std::vector<Eigen::Vector2i>& path,
@@ -128,6 +128,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
   g[start(0)][start(1)] = 0;
   parent[start(0)][start(1)] = start;
   open.insert(std::make_pair((goal - start).lpNorm<2>(), start));
+
   while (!open.empty()) {
     current = open.begin()->second;
     open.erase(open.begin());
@@ -155,11 +156,11 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
         // current point has been visited
         if (g[next(0)][next(1)] > g[current(0)][current(1)] +
                                       grid_map[current(0)][current(1)] +
-                                      (current - next).lpNorm<2>()) {
+                                      d.lpNorm<2>()) {
           // the new path is shorter
           g[next(0)][next(1)] = g[current(0)][current(1)] +
                                 grid_map[current(0)][current(1)] +
-                                (current - next).lpNorm<1>();
+                                d.lpNorm<1>();
           parent[next(0)][next(1)] = current;
           continue;
         }
@@ -167,7 +168,7 @@ bool astar(const std::vector<std::vector<double>>& grid_map,
         // current point has not been visited
         g[next(0)][next(1)] = g[current(0)][current(1)] +
                               grid_map[current(0)][current(1)] +
-                              (current - next).lpNorm<1>();
+                              d.lpNorm<1>();
         parent[next(0)][next(1)] = current;
         open.insert(
             std::make_pair(g[next(0)][next(1)] + ASTAR_HEURISTIC_COEFFICIENT *

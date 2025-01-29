@@ -21,15 +21,13 @@ class Smooth {
 
  public:
   Smooth(const std::vector<Eigen::Vector2d>& heuristicPath, ObjectType type,
-         int maxIter = 30) {
+         int maxIter = 30)
+      : arm(type), env(ObjectType::ENV) {
     this->n = heuristicPath.size();
 
     this->path = heuristicPath;
     this->x = Eigen::VectorXd::Zero(2 * this->n);
     this->convertToVariables();
-
-    this->arm = Object(type);
-    this->env = Object(ObjectType::ENV);
 
     this->solve(maxIter);
   }
@@ -53,11 +51,14 @@ class Smooth {
 
     // distance potential field
     for (int i = 1; i < smooth->n - 1; ++i) {
-      res += exp(-smooth->env.distanceToObject(smooth->arm.armTransform(optX(i), optX(i + smooth->n))));
+      double d = smooth->env.distanceToObject(
+          smooth->arm.armTransform(optX(i), optX(i + smooth->n)));
 
-      optG(i) += (exp(-smooth->env.distanceToObject(smooth->arm.armTransform(optX(i) + GRAD_GAP, optX(i + smooth->n)))) - exp(-smooth->env.distanceToObject(smooth->arm.armTransform(optX(i) - GRAD_GAP, optX(i + smooth->n))))) / 2 / GRAD_GAP;
+      res += exp(-d * 50);
 
-      optG(i + smooth->n) += (exp(-smooth->env.distanceToObject(smooth->arm.armTransform(optX(i), optX(i + smooth->n) + GRAD_GAP))) - exp(-smooth->env.distanceToObject(smooth->arm.armTransform(optX(i), optX(i + smooth->n) - GRAD_GAP)))) / 2 / GRAD_GAP;
+      optG(i) += -exp(-d * 50) * (smooth->env.distanceToObject(smooth->arm.armTransform(optX(i) + GRAD_GAP, optX(i + smooth->n))) - d) / GRAD_GAP;
+
+      optG(i + smooth->n) += -exp(-d) * (smooth->env.distanceToObject(smooth->arm.armTransform(optX(i), optX(i + smooth->n) + GRAD_GAP)) - d) / GRAD_GAP;
     }
 
     // smoothness potential field
@@ -73,16 +74,19 @@ class Smooth {
       }
       optG(i) += -4 * (optX(i - 1) - 2 * optX(i) + optX(i + 1));
     }
+
+    return res;
   }
 
   void convertToPath() {
-    for (int i = 0; i <= this->n; ++i) {
+    this->path.clear();
+    for (int i = 0; i < this->n; ++i) {
       this->path.push_back(Eigen::Vector2d(this->x(i), this->x(i + this->n)));
     }
   }
 
   void convertToVariables() {
-    for (int i = 0; i <= this->n; ++i) {
+    for (int i = 0; i < this->n; ++i) {
       this->x(i) = this->path[i](0);
       this->x(i + this->n) = this->path[i](1);
     }
