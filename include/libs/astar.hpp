@@ -9,7 +9,7 @@
 #define OBSTACLE_FIELD_REDUCTION 0.3
 #define ASTAR_HEURISTIC_COEFFICIENT 1.0
 
-namespace astar {
+namespace nextinnovation {
 bool astar(const std::vector<std::vector<bool>>& grid_map,
            const Eigen::Vector2i& start, const Eigen::Vector2i& goal,
            std::vector<Eigen::Vector2i>& path,
@@ -218,5 +218,5 @@ void samplePath(const std::vector<Eigen::Vector2i>& path,
   sampled_path.push_back(path[n - 1]);
 }
 
-}  // namespace astar
+}  // namespace nextinnovation
 #endif  // ASTAR_HPP

@@ -26,7 +26,6 @@
 #include "log.hpp"
 #include "proto/ArmTrajectoryService.grpc.pb.h"
 #include "space.hpp"
-#include "visualize.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -56,10 +55,12 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::Status;
 
-using namespace config::alphabot;
+using namespace nextinnovation::alphabot;
 
 // shared variables
 ArmTrajectory* g_trajectory = new ArmTrajectory();
+std::vector<Eigen::Vector2d>* g_voltage = new std::vector<Eigen::Vector2d>();
+std::vector<Eigen::Vector2d>* g_velocity = new std::vector<Eigen::Vector2d>();
 bool g_hasNewTrajectory = false;
 bool g_isRunning = true;
 std::mutex g_trajectoryMutex;
@@ -104,10 +105,9 @@ enum class LogLevel {
 
 void ShowLog(LogLevel level, const char* format, ...) {
   static const std::unordered_map<LogLevel, std::pair<ImVec4, const char*>> logConfig = {
-    {LogLevel::LOG_INFO,  {{0.0f, 1.0f, 0.0f, 1.0f}, "INFO "}},
-    {LogLevel::LOG_WARN,  {{1.0f, 1.0f, 0.0f, 1.0f}, "WARN "}},
-    {LogLevel::LOG_ERROR, {{1.0f, 0.0f, 0.0f, 1.0f}, "ERROR"}}
-  };
+      {LogLevel::LOG_INFO, {{0.0f, 1.0f, 0.0f, 1.0f}, "INFO "}},
+      {LogLevel::LOG_WARN, {{1.0f, 1.0f, 0.0f, 1.0f}, "WARN "}},
+      {LogLevel::LOG_ERROR, {{1.0f, 0.0f, 0.0f, 1.0f}, "ERROR"}}};
 
   va_list args;
   va_start(args, format);
@@ -160,62 +160,71 @@ class Service final : public ArmTrajectoryService::Service {
     const ArmPositionState& start = request->start();
     const ArmPositionState& end = request->end();
     log_info("Received request: start(%.2f, %.2f), end(%.2f, %.2f)",
-             start.shoulderheightmeter(), start.elbowpositiondegree(),
-             end.shoulderheightmeter(), end.elbowpositiondegree());
+             start.shoulderheightmeter(), start.elbowpositionradian(),
+             end.shoulderheightmeter(), end.elbowpositionradian());
     ShowInfo("Receive a request");
 
     // get the grid index of the start and end points
-    Eigen::Vector2d startTR(start.shoulderheightmeter(), start.elbowpositiondegree());
-    Eigen::Vector2d endTR(end.shoulderheightmeter(), end.elbowpositiondegree());
-    Eigen::Vector2i startGridIdx = getGridIdx(startTR);
-    Eigen::Vector2i endGridIdx = getGridIdx(endTR);
+    Eigen::Vector2d startTR(start.shoulderheightmeter(), start.elbowpositionradian());
+    Eigen::Vector2d endTR(end.shoulderheightmeter(), end.elbowpositionradian());
+    Eigen::Vector2i startGridIdx = nextinnovation::getGridIdx(startTR);
+    Eigen::Vector2i endGridIdx = nextinnovation::getGridIdx(endTR);
     log_info("Start grid index: (%d, %d), end grid index: (%d, %d)",
              startGridIdx(0), startGridIdx(1), endGridIdx(0), endGridIdx(1));
 
     // judge the type of the arm
-    ObjectType armType, expType;
+    nextinnovation::ObjectType armType, expType;
     if (request->hasalgae() && request->hascoral()) {
-      armType = ObjectType::ARM_ALGAE_CORAL;
-      expType = ObjectType::ARM_EXP_ALGAE_CORAL;
+      armType = nextinnovation::ObjectType::ARM_ALGAE_CORAL;
+      expType = nextinnovation::ObjectType::ARM_EXP_ALGAE_CORAL;
     } else if (request->hasalgae()) {
-      armType = ObjectType::ARM_ALGAE;
-      expType = ObjectType::ARM_EXP_ALGAE;
+      armType = nextinnovation::ObjectType::ARM_ALGAE;
+      expType = nextinnovation::ObjectType::ARM_EXP_ALGAE;
     } else if (request->hascoral()) {
-      armType = ObjectType::ARM_CORAL;
-      expType = ObjectType::ARM_EXP_CORAL;
+      armType = nextinnovation::ObjectType::ARM_CORAL;
+      expType = nextinnovation::ObjectType::ARM_EXP_CORAL;
     } else {
-      armType = ObjectType::ARM;
-      expType = ObjectType::ARM_EXP;
+      armType = nextinnovation::ObjectType::ARM;
+      expType = nextinnovation::ObjectType::ARM_EXP;
     }
 
     // find the path in the grid map
     std::vector<std::vector<bool>> grid;
     getGridMap(expType, grid);
     std::vector<Eigen::Vector2i> path, visited, sampledPath;
-    if (!astar::astar(grid, startGridIdx, endGridIdx, path, visited)) {
+    if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, path, visited)) {
       log_warn("Failed to find a path in the expanded map.");
       ShowWarn("Failed to find a path in the expanded map.");
       getGridMap(armType, grid);
-      if (!astar::astar(grid, startGridIdx, endGridIdx, path, visited)) {
+      if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, path, visited)) {
         log_error("Failed to find a path in the original map.");
         ShowError("Failed to find a path in the original map.");
         return Status::CANCELLED;
       }
     }
     log_info("Found a path with %d points.", path.size());
-    astar::samplePath(path, sampledPath, 17);
+    nextinnovation::samplePath(path, sampledPath, 30);
     sampledPath = path;
 
     // generate the trajectory
     ArmTrajectory* trajectory = response->mutable_trajectory();
-    Topp topp(getTRs(sampledPath));
-    topp.getTrajectory(trajectory);
+    std::vector<Eigen::Vector2d> voltage, velocity;
+    nextinnovation::Topp topp(nextinnovation::getTRs(sampledPath));
+    topp.getTrajectory(trajectory, voltage, velocity);
     *trajectory->mutable_parameter() = *request;
 
     // write the trajectory to the shared variable
     {
       std::unique_lock<std::mutex> lock(g_trajectoryMutex);
       g_trajectory->CopyFrom(*trajectory);
+      g_voltage->clear();
+      g_velocity->clear();
+      for (const Eigen::Vector2d& v : voltage) {
+        g_voltage->push_back(v);
+      }
+      for (const Eigen::Vector2d& v : velocity) {
+        g_velocity->push_back(v);
+      }
       g_hasNewTrajectory = true;
     }
 
@@ -226,7 +235,7 @@ class Service final : public ArmTrajectoryService::Service {
 };
 
 void RunGrpcServer() {
-  std::string serverAddress("0.0.0.0:" + config::params::GRPC_PORT);
+  std::string serverAddress("0.0.0.0:" + nextinnovation::config::GRPC_PORT);
   Service service;
 
   ServerBuilder builder;
@@ -253,10 +262,6 @@ int main(int argc, char* argv[]) {
 
   log_set_quiet(false);
 
-  ShowInfo("I'm Info");
-  ShowWarn("I'm Warn");
-  ShowError("I'm Error");
-  
   ShowInfo("Welcome to Cyber Planner 2025");
   log_info(
       "Welcome to Cyber Planner 2025!"
@@ -304,9 +309,10 @@ int main(int argc, char* argv[]) {
   ImGui::CreateContext();
   ImGuiIO& io = ImGui::GetIO();
   (void)io;
+  io.IniFilename = "imgui.ini";
   ImGui::StyleColorsClassic();
-  ImGui::GetStyle().ScaleAllSizes(2.0f);  
-  io.FontGlobalScale = 2.0f;             
+  ImGui::GetStyle().ScaleAllSizes(2.0f);
+  io.FontGlobalScale = 2.0f;
 
   // initialize imgui for glfw
   ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -320,16 +326,16 @@ int main(int argc, char* argv[]) {
 
   // thread variables copy
   ArmTrajectory trajectory;
+  std::vector<Eigen::Vector2d> voltage, velocity;
 
   std::vector<std::vector<bool>> emap, amap;
   std::vector<Eigen::Vector2d> path;
-  ObjectType armType = ObjectType::ARM;
-  ObjectType expType = ObjectType::ARM_EXP;
+  nextinnovation::ObjectType armType = nextinnovation::ObjectType::ARM;
+  nextinnovation::ObjectType expType = nextinnovation::ObjectType::ARM_EXP;
   double simT = 0, simR = 0;
   int simIndex = 0;
   auto simStart = std::chrono::high_resolution_clock::now();
-  io.IniFilename = "imgui.ini";
-  
+
   // main loop
   while (!glfwWindowShouldClose(window)) {
     if (!serverThread.joinable()) {
@@ -347,21 +353,29 @@ int main(int argc, char* argv[]) {
       {
         g_hasNewTrajectory = false;
         trajectory.CopyFrom(*g_trajectory);
+        voltage.clear();
+        for (const Eigen::Vector2d& v : *g_voltage) {
+          voltage.push_back(v);
+        }
+        velocity.clear();
+        for (const Eigen::Vector2d& v : *g_velocity) {
+          velocity.push_back(v);
+        }
       }
 
       // update map
       if (trajectory.parameter().hasalgae() && trajectory.parameter().hascoral()) {
-        armType = ObjectType::ARM_ALGAE_CORAL;
-        expType = ObjectType::ARM_EXP_ALGAE_CORAL;
+        armType = nextinnovation::ObjectType::ARM_ALGAE_CORAL;
+        expType = nextinnovation::ObjectType::ARM_EXP_ALGAE_CORAL;
       } else if (trajectory.parameter().hasalgae()) {
-        armType = ObjectType::ARM_ALGAE;
-        expType = ObjectType::ARM_EXP_ALGAE;
+        armType = nextinnovation::ObjectType::ARM_ALGAE;
+        expType = nextinnovation::ObjectType::ARM_EXP_ALGAE;
       } else if (trajectory.parameter().hascoral()) {
-        armType = ObjectType::ARM_CORAL;
-        expType = ObjectType::ARM_EXP_CORAL;
+        armType = nextinnovation::ObjectType::ARM_CORAL;
+        expType = nextinnovation::ObjectType::ARM_EXP_CORAL;
       } else {
-        armType = ObjectType::ARM;
-        expType = ObjectType::ARM_EXP;
+        armType = nextinnovation::ObjectType::ARM;
+        expType = nextinnovation::ObjectType::ARM_EXP;
       }
       getGridMap(armType, amap);
       getGridMap(expType, emap);
@@ -369,7 +383,7 @@ int main(int argc, char* argv[]) {
       path.clear();
       for (const ArmTrajectoryState& state : trajectory.states()) {
         path.push_back(Eigen::Vector2d(state.position().shoulderheightmeter(),
-                                       state.position().elbowpositiondegree()));
+                                       state.position().elbowpositionradian()));
       }
     }
 
@@ -388,8 +402,8 @@ int main(int argc, char* argv[]) {
       double factor = dt / (trajectory.states(simIndex + 1).timestamp() - trajectory.states(simIndex).timestamp());
       simT = trajectory.states(simIndex).position().shoulderheightmeter() * (1 - factor) +
              trajectory.states(simIndex + 1).position().shoulderheightmeter() * factor;
-      simR = trajectory.states(simIndex).position().elbowpositiondegree() * (1 - factor) +
-             trajectory.states(simIndex + 1).position().elbowpositiondegree() * factor;
+      simR = trajectory.states(simIndex).position().elbowpositionradian() * (1 - factor) +
+             trajectory.states(simIndex + 1).position().elbowpositionradian() * factor;
     }
 
     // handle console output
@@ -429,19 +443,19 @@ int main(int argc, char* argv[]) {
      * Window 2: Arm Trajectory
      */
     ImGui::Begin("Arm Trajectory", nullptr, WINDOW_FLAGS);
-    if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (degree)", ImVec2(-1, 400))) {
+    if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (rad)", ImVec2(-1, 400))) {
       ImPlot::SetupAxisLimits(ImAxis_X1, ELEVATOR_MIN_POSITION_METER, ELEVATOR_MAX_POSITION_METER);
-      ImPlot::SetupAxisLimits(ImAxis_Y1, ARM_MIN_THETA_DEGREE, ARM_MAX_THETA_DEGREE);
+      ImPlot::SetupAxisLimits(ImAxis_Y1, ARM_MIN_THETA_RADIAN, ARM_MAX_THETA_RADIAN);
 
       std::vector<double> obsX, obsY, expX, expY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
           if (amap[t][r]) {
-            Eigen::Vector2d tr = getTR(t, r);
+            Eigen::Vector2d tr = nextinnovation::getTR(t, r);
             obsX.push_back(tr(0));
             obsY.push_back(tr(1));
           } else if (emap[t][r]) {
-            Eigen::Vector2d tr = getTR(t, r);
+            Eigen::Vector2d tr = nextinnovation::getTR(t, r);
             expX.push_back(tr(0));
             expY.push_back(tr(1));
           }
@@ -468,57 +482,86 @@ int main(int argc, char* argv[]) {
     /**
      * Window 3: Trajectory Params
      */
-    ImGui::Begin("Trajectory Params", nullptr, WINDOW_FLAGS);
-    if (ImPlot::BeginPlot("Shoulder Velocity", "Time (s)", "Velocity (m/s)")) {
-      ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ELEVATOR_VMAX, 1.2 * ELEVATOR_VMAX);
-      double* velocityT = new double[trajectory.states_size()];
-      double* timestamp = new double[trajectory.states_size()];
-      for (int i = 0; i < trajectory.states_size(); ++i) {
-        velocityT[i] = trajectory.states(i).velocity().shouldervelocitymeterpersecond();
-        timestamp[i] = trajectory.states(i).timestamp();
+    ImGui::Begin("Trajectory Params");
+    if (velocity.size() > 0 && trajectory.states_size() > 0 && voltage.size() > 0) {
+      if (ImPlot::BeginPlot("Current")) {
+        ImPlot::SetupAxes("Time (s)", "Current (A)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_I_MAX, 1.3 * ARM_I_MAX);
+        double* elbowCurrentT = new double[trajectory.states_size()];
+        double* shoulderCurrentT = new double[trajectory.states_size()];
+        double* timestamp = new double[trajectory.states_size()];
+        for (int i = 0; i < trajectory.states_size(); ++i) {
+          timestamp[i] = trajectory.states(i).timestamp();
+          shoulderCurrentT[i] = trajectory.states(i).current().shouldercurrentampere();
+          elbowCurrentT[i] = trajectory.states(i).current().elbowcurrentampere();
+        }
+        ImPlot::PlotLine("Shoulder Current", timestamp, shoulderCurrentT, trajectory.states_size());
+        ImPlot::PlotLine("Elbow Current", timestamp, elbowCurrentT, trajectory.states_size());
+        std::vector<double> vmaxX = {0, timestamp[trajectory.states_size() - 1]};
+        std::vector<double> vmaxY = {ARM_I_MAX, ARM_I_MAX};
+        std::vector<double> vminY = {-ARM_I_MAX, -ARM_I_MAX};
+        ImPlot::PlotLine("Max Current", vmaxX.data(), vmaxY.data(), 2);
+        ImPlot::PlotLine("Min Current", vmaxX.data(), vminY.data(), 2);
+        ImPlot::EndPlot();
       }
-      ImPlot::PlotLine("Shoulder Velocity", timestamp, velocityT, trajectory.states_size());
-      std::vector<double> vmaxX = {0, timestamp[trajectory.states_size() - 1]};
-      std::vector<double> vmaxY = {ELEVATOR_VMAX, ELEVATOR_VMAX};
-      std::vector<double> vminY = {-ELEVATOR_VMAX, -ELEVATOR_VMAX};
-      ImPlot::PlotLine("Shoulder Max Velocity", vmaxX.data(), vmaxY.data(), 2);
-      ImPlot::PlotLine("Shoulder Min Velocity", vmaxX.data(), vminY.data(), 2);
-      ImPlot::EndPlot();
-    }
-    if (ImPlot::BeginPlot("Elbow Velocity", "Time (s)", "Velocity (degree/s)")) {
-      ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ARM_VMAX, 1.2 * ARM_VMAX);
-      double* velocityT = new double[trajectory.states_size()];
-      double* timestamp = new double[trajectory.states_size()];
-      for (int i = 0; i < trajectory.states_size(); ++i) {
-        velocityT[i] = trajectory.states(i).velocity().elbowvelocitydegreepersecond();
-        timestamp[i] = trajectory.states(i).timestamp();
+      if (ImPlot::BeginPlot("Voltage")) {
+        ImPlot::SetupAxes("Time (s)", "Voltage (V)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_V_MAX, 1.3 * ARM_V_MAX);
+        double* elbowVoltageT = new double[trajectory.states_size()];
+        double* shoulderVoltageT = new double[trajectory.states_size()];
+        double* timestamp = new double[trajectory.states_size()];
+        for (int i = 0; i < trajectory.states_size(); ++i) {
+          timestamp[i] = trajectory.states(i).timestamp();
+          shoulderVoltageT[i] = voltage[i].x();
+          elbowVoltageT[i] = voltage[i].y();
+        }
+        ImPlot::PlotLine("Shoulder Voltage", timestamp, shoulderVoltageT, trajectory.states_size());
+        ImPlot::PlotLine("Elbow Voltage", timestamp, elbowVoltageT, trajectory.states_size());
+        std::vector<double> vmaxX = {0, timestamp[trajectory.states_size() - 1]};
+        std::vector<double> vmaxY = {ARM_V_MAX, ARM_V_MAX};
+        std::vector<double> vminY = {-ARM_V_MAX, -ARM_V_MAX};
+        ImPlot::PlotLine("Max Voltage", vmaxX.data(), vmaxY.data(), 2);
+        ImPlot::PlotLine("Min Voltage", vmaxX.data(), vminY.data(), 2);
+        ImPlot::EndPlot();
       }
-      ImPlot::PlotLine("Elbow Velocity", timestamp, velocityT, trajectory.states_size());
-      std::vector<double> vmaxX = {0, timestamp[trajectory.states_size() - 1]};
-      std::vector<double> vmaxY = {ARM_VMAX, ARM_VMAX};
-      std::vector<double> vminY = {-ARM_VMAX, -ARM_VMAX};
-      ImPlot::PlotLine("Elbow Max Velocity", vmaxX.data(), vmaxY.data(), 2);
-      ImPlot::PlotLine("Elbow Min Velocity", vmaxX.data(), vminY.data(), 2);
-      ImPlot::EndPlot();
-    }
-    if (ImPlot::BeginPlot("Voltage", "Time (s)", "Voltage (V)")) {
-      ImPlot::SetupAxisLimits(ImAxis_Y1, -1.2 * ARM_MAX_VOLTAGE, 1.2 * ARM_MAX_VOLTAGE);
-      double* elbowVoltageT = new double[trajectory.states_size()];
-      double* shoulderVoltageT = new double[trajectory.states_size()];
-      double* timestamp = new double[trajectory.states_size()];
-      for (int i = 0; i < trajectory.states_size(); ++i) {
-        timestamp[i] = trajectory.states(i).timestamp();
-        shoulderVoltageT[i] = trajectory.states(i).voltage().shouldervoltagevolt();
-        elbowVoltageT[i] = trajectory.states(i).voltage().elbowvoltagevolt();
+      if (ImPlot::BeginPlot("Shoulder Velocity")) {
+        ImPlot::SetupAxes("Time (s)", "Velocity (m/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
+        double* velocityT = new double[trajectory.states_size()];
+        double* timestamp = new double[trajectory.states_size()];
+        double maxVelocity = 0, minVelocity = 0;
+        for (int i = 0; i < trajectory.states_size(); ++i) {
+          velocityT[i] = velocity[i].x();
+          if (velocity[i].x() > maxVelocity) {
+            maxVelocity = velocity[i].x();
+          }
+          if (velocity[i].x() < minVelocity) {
+            minVelocity = velocity[i].x();
+          }
+          timestamp[i] = trajectory.states(i).timestamp();
+        }
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
+        ImPlot::PlotLine("Shoulder Velocity", timestamp, velocityT, trajectory.states_size());
+        ImPlot::EndPlot();
       }
-      ImPlot::PlotLine("Shoulder Voltage", timestamp, shoulderVoltageT, trajectory.states_size());
-      ImPlot::PlotLine("Elbow Voltage", timestamp, elbowVoltageT, trajectory.states_size());
-      std::vector<double> vmaxX = {0, timestamp[trajectory.states_size() - 1]};
-      std::vector<double> vmaxY = {ARM_MAX_VOLTAGE, ARM_MAX_VOLTAGE};
-      std::vector<double> vminY = {-ARM_MAX_VOLTAGE, -ARM_MAX_VOLTAGE};
-      ImPlot::PlotLine("Max Voltage", vmaxX.data(), vmaxY.data(), 2);
-      ImPlot::PlotLine("Min Voltage", vmaxX.data(), vminY.data(), 2);
-      ImPlot::EndPlot();
+      if (ImPlot::BeginPlot("Elbow Velocity")) {
+        ImPlot::SetupAxes("Time (s)", "Velocity (rad/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
+        double* velocityT = new double[trajectory.states_size()];
+        double* timestamp = new double[trajectory.states_size()];
+        double maxVelocity = 0, minVelocity = 0;
+        for (int i = 0; i < trajectory.states_size(); ++i) {
+          velocityT[i] = velocity[i].y();
+          if (velocity[i].y() > maxVelocity) {
+            maxVelocity = velocity[i].y();
+          }
+          if (velocity[i].y() < minVelocity) {
+            minVelocity = velocity[i].y();
+          }
+          timestamp[i] = trajectory.states(i).timestamp();
+        }
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
+        ImPlot::PlotLine("Elbow Velocity", timestamp, velocityT, trajectory.states_size());
+        ImPlot::EndPlot();
+      }
     }
     ImGui::End();
 
@@ -527,10 +570,10 @@ int main(int argc, char* argv[]) {
      */
     ImGui::Begin("2D Projection", nullptr, WINDOW_FLAGS);
     if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)", ImVec2(-1, 400), ImPlotFlags_Equal)) {
-      Object env = Object(ObjectType::ENV);
-      Object arm = Object(armType).armTransform(simT, simR);
-      Object exp = Object(expType).armTransform(simT, simR);
-      for (Geometry::Polygon& polygon : env.getPolygons()) {
+      nextinnovation::Object env = nextinnovation::Object(nextinnovation::ObjectType::ENV);
+      nextinnovation::Object arm = nextinnovation::Object(armType).armTransform(simT, simR);
+      nextinnovation::Object exp = nextinnovation::Object(expType).armTransform(simT, simR);
+      for (nextinnovation::Polygon& polygon : env.getPolygons()) {
         for (int i = 0; i < polygon.getPoints().size(); ++i) {
           Eigen::Vector2d pts1 = polygon.getPoints()[i];
           Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
@@ -539,7 +582,7 @@ int main(int argc, char* argv[]) {
           ImPlot::PlotLine("obstacle", plotX, plotY, 2);
         }
       }
-      for (Geometry::Polygon& polygon : arm.getPolygons()) {
+      for (nextinnovation::Polygon& polygon : arm.getPolygons()) {
         for (int i = 0; i < polygon.getPoints().size(); ++i) {
           Eigen::Vector2d pts1 = polygon.getPoints()[i];
           Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
@@ -548,7 +591,7 @@ int main(int argc, char* argv[]) {
           ImPlot::PlotLine("arm", plotX, plotY, 2);
         }
       }
-      for (Geometry::Polygon& polygon : exp.getPolygons()) {
+      for (nextinnovation::Polygon& polygon : exp.getPolygons()) {
         for (int i = 0; i < polygon.getPoints().size(); ++i) {
           Eigen::Vector2d pts1 = polygon.getPoints()[i];
           Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
@@ -558,8 +601,8 @@ int main(int argc, char* argv[]) {
         }
       }
       if (path.size() > 0) {
-        arm = Object(armType).armTransform(path[0](0), path[0](1));
-        for (Geometry::Polygon& polygon : arm.getPolygons()) {
+        arm = nextinnovation::Object(armType).armTransform(path[0](0), path[0](1));
+        for (nextinnovation::Polygon& polygon : arm.getPolygons()) {
           for (int i = 0; i < polygon.getPoints().size(); ++i) {
             Eigen::Vector2d pts1 = polygon.getPoints()[i];
             Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];
@@ -568,8 +611,8 @@ int main(int argc, char* argv[]) {
             ImPlot::PlotLine("target", plotX, plotY, 2);
           }
         }
-        arm = Object(expType).armTransform(path[path.size() - 1](0), path[path.size() - 1](1));
-        for (Geometry::Polygon& polygon : arm.getPolygons()) {
+        arm = nextinnovation::Object(armType).armTransform(path[path.size() - 1](0), path[path.size() - 1](1));
+        for (nextinnovation::Polygon& polygon : arm.getPolygons()) {
           for (int i = 0; i < polygon.getPoints().size(); ++i) {
             Eigen::Vector2d pts1 = polygon.getPoints()[i];
             Eigen::Vector2d pts2 = polygon.getPoints()[(i + 1) % polygon.getPoints().size()];

@@ -87,14 +87,14 @@ target_link_libraries(client
     Eigen3::Eigen
 )
 
-add_executable(cachee
-    src/cache.cpp
-    ${HEADER_FILES}
-)
+# add_executable(cachee
+#     src/cache.cpp
+#     ${HEADER_FILES}
+# )
 
-target_include_directories(cachee PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
+# target_include_directories(cachee PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/proto)
 
-target_link_libraries(cachee
-    trajectory_native_proto
-    Eigen3::Eigen
-)
+# target_link_libraries(cachee
+#     trajectory_native_proto
+#     Eigen3::Eigen
+# )

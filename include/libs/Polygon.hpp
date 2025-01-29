@@ -6,7 +6,7 @@
 #include "log.hpp"
 #include "sdqp.hpp"
 
-namespace Geometry {
+namespace nextinnovation {
 // A 2D polygon class
 class Polygon {
  private:
@@ -193,6 +193,6 @@ class Polygon {
     b = this->b;
   }
 };
-};  // namespace Geometry
+};  // namespace nextinnovation
 
 #endif  // POLYGON_HPP

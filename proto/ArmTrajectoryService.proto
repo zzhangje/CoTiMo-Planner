@@ -6,17 +6,12 @@ package com.nextinnovation.armtrajectoryservice;
 
 message ArmPositionState {
   double shoulderHeightMeter = 1;
-  double elbowPositionDegree = 2;
+  double elbowPositionRadian = 2;
 }
 
-message ArmVoltageState {
-  double shoulderVoltageVolt = 1;
-  double elbowVoltageVolt = 2;
-}
-
-message ArmVelocityState {
-  double shoulderVelocityMeterPerSecond = 1;
-  double elbowVelocityDegreePerSecond = 2;
+message ArmCurrentState {
+  double shoulderCurrentAmpere = 1;
+  double elbowCurrentAmpere = 2;
 }
 
 message ArmTrajectoryParameter {
@@ -29,8 +24,7 @@ message ArmTrajectoryParameter {
 message ArmTrajectoryState {
   double timestamp = 1;
   ArmPositionState position = 2;
-  ArmVoltageState voltage = 3;
-  ArmVelocityState velocity = 4;
+  ArmCurrentState current = 3;
 }
 
 message ArmTrajectory {
