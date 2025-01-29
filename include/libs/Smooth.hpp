@@ -30,6 +30,8 @@ class Smooth {
 
     this->arm = Object(type);
     this->env = Object(ObjectType::ENV);
+
+    this->solve(maxIter);
   }
 
   void getPath(std::vector<Eigen::Vector2d>& path) {

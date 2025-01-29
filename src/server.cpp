@@ -203,8 +203,8 @@ class Service final : public ArmTrajectoryService::Service {
       }
     }
     log_info("Found a path with %d points.", path.size());
-    nextinnovation::samplePath(path, sampledPath, 30);
-    sampledPath = path;
+    nextinnovation::samplePath(path, sampledPath, 5);
+    // sampledPath = path;
 
     // generate the trajectory
     ArmTrajectory* trajectory = response->mutable_trajectory();
@@ -389,8 +389,8 @@ int main(int argc, char* argv[]) {
 
     // handle simulation
     auto simNow = std::chrono::high_resolution_clock::now();
+    double simTime = std::chrono::duration_cast<std::chrono::milliseconds>(simNow - simStart).count() / 1000.0;
     if (path.size() > 0) {
-      double simTime = std::chrono::duration_cast<std::chrono::milliseconds>(simNow - simStart).count() / 1000.0;
       if (simTime > trajectory.states(simIndex + 1).timestamp()) {
         simIndex++;
         if (simIndex >= trajectory.states_size() - 1) {
@@ -484,6 +484,8 @@ int main(int argc, char* argv[]) {
      */
     ImGui::Begin("Trajectory Params");
     if (velocity.size() > 0 && trajectory.states_size() > 0 && voltage.size() > 0) {
+      std::vector<double> simX = {simTime, simTime};
+      std::vector<double> simY = {-0x3f3f3f3f, 0x3f3f3f3f};
       if (ImPlot::BeginPlot("Current")) {
         ImPlot::SetupAxes("Time (s)", "Current (A)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_I_MAX, 1.3 * ARM_I_MAX);
@@ -502,6 +504,7 @@ int main(int argc, char* argv[]) {
         std::vector<double> vminY = {-ARM_I_MAX, -ARM_I_MAX};
         ImPlot::PlotLine("Max Current", vmaxX.data(), vmaxY.data(), 2);
         ImPlot::PlotLine("Min Current", vmaxX.data(), vminY.data(), 2);
+        ImPlot::PlotLine("Current Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
       if (ImPlot::BeginPlot("Voltage")) {
@@ -522,13 +525,14 @@ int main(int argc, char* argv[]) {
         std::vector<double> vminY = {-ARM_V_MAX, -ARM_V_MAX};
         ImPlot::PlotLine("Max Voltage", vmaxX.data(), vmaxY.data(), 2);
         ImPlot::PlotLine("Min Voltage", vmaxX.data(), vminY.data(), 2);
+        ImPlot::PlotLine("Voltage Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
       if (ImPlot::BeginPlot("Shoulder Velocity")) {
         ImPlot::SetupAxes("Time (s)", "Velocity (m/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         double* velocityT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
-        double maxVelocity = 0, minVelocity = 0;
+        double maxVelocity = 1, minVelocity = -1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           velocityT[i] = velocity[i].x();
           if (velocity[i].x() > maxVelocity) {
@@ -541,13 +545,14 @@ int main(int argc, char* argv[]) {
         }
         ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
         ImPlot::PlotLine("Shoulder Velocity", timestamp, velocityT, trajectory.states_size());
+        ImPlot::PlotLine("Velocity Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
       if (ImPlot::BeginPlot("Elbow Velocity")) {
         ImPlot::SetupAxes("Time (s)", "Velocity (rad/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         double* velocityT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
-        double maxVelocity = 0, minVelocity = 0;
+        double maxVelocity = 1, minVelocity = -1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           velocityT[i] = velocity[i].y();
           if (velocity[i].y() > maxVelocity) {
@@ -560,6 +565,7 @@ int main(int argc, char* argv[]) {
         }
         ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
         ImPlot::PlotLine("Elbow Velocity", timestamp, velocityT, trajectory.states_size());
+        ImPlot::PlotLine("Velocity Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
     }
