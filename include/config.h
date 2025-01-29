@@ -61,13 +61,13 @@ constexpr double ELEVATOR_COS_ANGLE =
 const double ELEVATOR_MIN_POSITION_METER = 0;
 const double ELEVATOR_MAX_POSITION_METER = 2.0;
 const double ELEVATOR_V_MAX = 12;
-const double ELEVATOR_I_MAX = 25;
-const double ELEVATOR_Kg = .001;
-const double ELEVATOR_Ks = .001;
-const double ELEVATOR_Kv = .001;
-const double ELEVATOR_Ka = .001;
-const double ELEVATOR_R = 10;
-const double ELEVATOR_METER_2_MOTOR_RADIAN = 1.0;
+const double ELEVATOR_I_MAX = 40;
+const double ELEVATOR_Kg = 2;
+const double ELEVATOR_Ks = 2;
+const double ELEVATOR_Kv = 30;
+const double ELEVATOR_Ka = 10;
+const double ELEVATOR_R = 0.1;
+const double ELEVATOR_METER_2_MOTOR_RADIAN = .1;
 
 // the properties of the arm motor
 constexpr double ARM_MIN_THETA_DEGREE = 0;
@@ -75,13 +75,13 @@ constexpr double ARM_MAX_THETA_DEGREE = 350;
 constexpr double ARM_MIN_THETA_RADIAN = toRadians(ARM_MIN_THETA_DEGREE);
 constexpr double ARM_MAX_THETA_RADIAN = toRadians(ARM_MAX_THETA_DEGREE);
 const double ARM_V_MAX = 12;
-const double ARM_I_MAX = 25;
-const double ARM_Kg = .001;
-const double ARM_Ks = .001;
-const double ARM_Kv = .001;
-const double ARM_Ka = .001;
-const double ARM_R = 10;
-const double ARM_RADIAN_2_MOTOR_RADIAN = 1.0;
+const double ARM_I_MAX = 40;
+const double ARM_Kg = 2;
+const double ARM_Ks = 2;
+const double ARM_Kv = 30;
+const double ARM_Ka = 10;
+const double ARM_R = 0.1;
+const double ARM_RADIAN_2_MOTOR_RADIAN = .1;
 
 // the properties of the grid map
 constexpr double ELEVATOR_GRID_SIZE = .01;

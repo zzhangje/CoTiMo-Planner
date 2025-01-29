@@ -106,6 +106,7 @@ void getGridMap(ObjectType type, std::vector<std::vector<double>>& map) {
         double max_val = map[tt - 1][rr - 1];
         if (map[tt - 1][rr] > max_val) max_val = map[tt - 1][rr];
         if (map[tt][rr - 1] > max_val) max_val = map[tt][rr - 1];
+        if (map[tt - 1][rr - 1] > max_val) max_val = map[tt - 1][rr - 1];
         map[tt][rr] = max_val * reduce;
       }
     }
@@ -116,17 +117,18 @@ void getGridMap(ObjectType type, std::vector<std::vector<double>>& map) {
       double max_val = map[tt + 1][rr + 1];
       if (map[tt + 1][rr] > max_val) max_val = map[tt + 1][rr];
       if (map[tt][rr + 1] > max_val) max_val = map[tt][rr + 1];
+      if (map[tt + 1][rr + 1] > max_val) max_val = map[tt + 1][rr + 1];
       map[tt][rr] =
           map[tt][rr] > max_val * reduce ? map[tt][rr] : max_val * reduce;
     }
   }
-  for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
-    for (int rr = 0; rr < ARM_GRID_NUMS; ++rr) {
-      if (map[tt][rr] < 1) {
-        map[tt][rr] = 0;
-      }
-    }
-  }
+  // for (int tt = 0; tt < ELEVATOR_GRID_NUMS; ++tt) {
+  //   for (int rr = 0; rr < ARM_GRID_NUMS; ++rr) {
+  //     if (map[tt][rr] < 1) {
+  //       map[tt][rr] = 0;
+  //     }
+  //   }
+  // }
   return;
 }
 }  // namespace nextinnovation

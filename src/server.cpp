@@ -17,6 +17,7 @@
 
 #include "Object.hpp"
 #include "Polygon.hpp"
+#include "Smooth.hpp"
 #include "Topp.hpp"
 #include "astar.hpp"
 #include "config.h"
@@ -61,6 +62,7 @@ using namespace nextinnovation::alphabot;
 ArmTrajectory* g_trajectory = new ArmTrajectory();
 std::vector<Eigen::Vector2d>* g_voltage = new std::vector<Eigen::Vector2d>();
 std::vector<Eigen::Vector2d>* g_velocity = new std::vector<Eigen::Vector2d>();
+std::vector<Eigen::Vector2d>* g_path = new std::vector<Eigen::Vector2d>();
 bool g_hasNewTrajectory = false;
 bool g_isRunning = true;
 std::mutex g_trajectoryMutex;
@@ -189,27 +191,31 @@ class Service final : public ArmTrajectoryService::Service {
     }
 
     // find the path in the grid map
-    std::vector<std::vector<bool>> grid;
+    std::vector<std::vector<double>> grid;
     getGridMap(expType, grid);
-    std::vector<Eigen::Vector2i> path, visited, sampledPath;
-    if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, path, visited)) {
+    std::vector<Eigen::Vector2i> gridPath, visited, sampledPath;
+    if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, gridPath, visited)) {
       log_warn("Failed to find a path in the expanded map.");
       ShowWarn("Failed to find a path in the expanded map.");
       getGridMap(armType, grid);
-      if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, path, visited)) {
+      if (!nextinnovation::astar(grid, startGridIdx, endGridIdx, gridPath, visited)) {
         log_error("Failed to find a path in the original map.");
         ShowError("Failed to find a path in the original map.");
         return Status::CANCELLED;
       }
     }
-    log_info("Found a path with %d points.", path.size());
-    nextinnovation::samplePath(path, sampledPath, 30);
-    sampledPath = path;
+    log_info("Found a path with %d points.", gridPath.size());
+    nextinnovation::samplePath(gridPath, sampledPath, 5);
+    std::vector<Eigen::Vector2d> path = nextinnovation::getTRs(sampledPath);
+
+    // optimize the path
+    nextinnovation::Smooth smooth(path, armType);
+    path = smooth.getPath();
 
     // generate the trajectory
     ArmTrajectory* trajectory = response->mutable_trajectory();
     std::vector<Eigen::Vector2d> voltage, velocity;
-    nextinnovation::Topp topp(nextinnovation::getTRs(sampledPath));
+    nextinnovation::Topp topp(path);
     topp.getTrajectory(trajectory, voltage, velocity);
     *trajectory->mutable_parameter() = *request;
 
@@ -219,11 +225,15 @@ class Service final : public ArmTrajectoryService::Service {
       g_trajectory->CopyFrom(*trajectory);
       g_voltage->clear();
       g_velocity->clear();
+      g_path->clear();
       for (const Eigen::Vector2d& v : voltage) {
         g_voltage->push_back(v);
       }
       for (const Eigen::Vector2d& v : velocity) {
         g_velocity->push_back(v);
+      }
+      for (const Eigen::Vector2d& p : nextinnovation::getTRs(sampledPath)) {
+        g_path->push_back(p);
       }
       g_hasNewTrajectory = true;
     }
@@ -328,10 +338,12 @@ int main(int argc, char* argv[]) {
   ArmTrajectory trajectory;
   std::vector<Eigen::Vector2d> voltage, velocity;
 
-  std::vector<std::vector<bool>> emap, amap;
-  std::vector<Eigen::Vector2d> path;
+  std::vector<std::vector<double>> emap, amap;
+  std::vector<Eigen::Vector2d> path, astarPath;
   nextinnovation::ObjectType armType = nextinnovation::ObjectType::ARM;
   nextinnovation::ObjectType expType = nextinnovation::ObjectType::ARM_EXP;
+  getGridMap(armType, amap);
+  getGridMap(expType, emap);
   double simT = 0, simR = 0;
   int simIndex = 0;
   auto simStart = std::chrono::high_resolution_clock::now();
@@ -350,16 +362,20 @@ int main(int argc, char* argv[]) {
 
     // handle new trajectory
     if (g_hasNewTrajectory) {
+      voltage.clear();
+      velocity.clear();
+      astarPath.clear();
       {
         g_hasNewTrajectory = false;
         trajectory.CopyFrom(*g_trajectory);
-        voltage.clear();
         for (const Eigen::Vector2d& v : *g_voltage) {
           voltage.push_back(v);
         }
-        velocity.clear();
         for (const Eigen::Vector2d& v : *g_velocity) {
           velocity.push_back(v);
+        }
+        for (const Eigen::Vector2d& p : *g_path) {
+          astarPath.push_back(p);
         }
       }
 
@@ -385,12 +401,16 @@ int main(int argc, char* argv[]) {
         path.push_back(Eigen::Vector2d(state.position().shoulderheightmeter(),
                                        state.position().elbowpositionradian()));
       }
+
+      // reset simulation
+      simIndex = 0;
+      simStart = std::chrono::high_resolution_clock::now();
     }
 
     // handle simulation
     auto simNow = std::chrono::high_resolution_clock::now();
+    double simTime = std::chrono::duration_cast<std::chrono::milliseconds>(simNow - simStart).count() / 1000.0;
     if (path.size() > 0) {
-      double simTime = std::chrono::duration_cast<std::chrono::milliseconds>(simNow - simStart).count() / 1000.0;
       if (simTime > trajectory.states(simIndex + 1).timestamp()) {
         simIndex++;
         if (simIndex >= trajectory.states_size() - 1) {
@@ -440,7 +460,7 @@ int main(int argc, char* argv[]) {
     ImGui::End();
 
     /**
-     * Window 2: Arm Trajectory
+     * Window 2: Configuration Space
      */
     ImGui::Begin("Arm Trajectory", nullptr, WINDOW_FLAGS);
     if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (rad)", ImVec2(-1, 400))) {
@@ -450,11 +470,11 @@ int main(int argc, char* argv[]) {
       std::vector<double> obsX, obsY, expX, expY;
       for (int t = 0; t < emap.size(); t++) {
         for (int r = 0; r < emap[t].size(); r++) {
-          if (amap[t][r]) {
+          if (amap[t][r] > 99.9) {
             Eigen::Vector2d tr = nextinnovation::getTR(t, r);
             obsX.push_back(tr(0));
             obsY.push_back(tr(1));
-          } else if (emap[t][r]) {
+          } else if (emap[t][r] > 99.9) {
             Eigen::Vector2d tr = nextinnovation::getTR(t, r);
             expX.push_back(tr(0));
             expY.push_back(tr(1));
@@ -472,6 +492,14 @@ int main(int argc, char* argv[]) {
       }
       ImPlot::PlotLine("trajectory", trajX, trajY, path.size());
 
+      double* astarX = new double[astarPath.size()];
+      double* astarY = new double[astarPath.size()];
+      for (int i = 0; i < astarPath.size(); ++i) {
+        astarX[i] = astarPath[i](0);
+        astarY[i] = astarPath[i](1);
+      }
+      ImPlot::PlotLine("astar", astarX, astarY, astarPath.size());
+
       double currentX[] = {simT};
       double currentY[] = {simR};
       ImPlot::PlotScatter("current", currentX, currentY, 1);
@@ -484,6 +512,8 @@ int main(int argc, char* argv[]) {
      */
     ImGui::Begin("Trajectory Params");
     if (velocity.size() > 0 && trajectory.states_size() > 0 && voltage.size() > 0) {
+      std::vector<double> simX = {simTime, simTime};
+      std::vector<double> simY = {-0x3f3f3f3f, 0x3f3f3f3f};
       if (ImPlot::BeginPlot("Current")) {
         ImPlot::SetupAxes("Time (s)", "Current (A)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_I_MAX, 1.3 * ARM_I_MAX);
@@ -502,6 +532,7 @@ int main(int argc, char* argv[]) {
         std::vector<double> vminY = {-ARM_I_MAX, -ARM_I_MAX};
         ImPlot::PlotLine("Max Current", vmaxX.data(), vmaxY.data(), 2);
         ImPlot::PlotLine("Min Current", vmaxX.data(), vminY.data(), 2);
+        ImPlot::PlotLine("Current Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
       if (ImPlot::BeginPlot("Voltage")) {
@@ -522,13 +553,14 @@ int main(int argc, char* argv[]) {
         std::vector<double> vminY = {-ARM_V_MAX, -ARM_V_MAX};
         ImPlot::PlotLine("Max Voltage", vmaxX.data(), vmaxY.data(), 2);
         ImPlot::PlotLine("Min Voltage", vmaxX.data(), vminY.data(), 2);
+        ImPlot::PlotLine("Voltage Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
       if (ImPlot::BeginPlot("Shoulder Velocity")) {
         ImPlot::SetupAxes("Time (s)", "Velocity (m/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         double* velocityT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
-        double maxVelocity = 0, minVelocity = 0;
+        double maxVelocity = 1, minVelocity = -1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           velocityT[i] = velocity[i].x();
           if (velocity[i].x() > maxVelocity) {
@@ -541,13 +573,14 @@ int main(int argc, char* argv[]) {
         }
         ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
         ImPlot::PlotLine("Shoulder Velocity", timestamp, velocityT, trajectory.states_size());
+        ImPlot::PlotLine("Velocity Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
       if (ImPlot::BeginPlot("Elbow Velocity")) {
         ImPlot::SetupAxes("Time (s)", "Velocity (rad/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         double* velocityT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
-        double maxVelocity = 0, minVelocity = 0;
+        double maxVelocity = 1, minVelocity = -1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           velocityT[i] = velocity[i].y();
           if (velocity[i].y() > maxVelocity) {
@@ -560,6 +593,7 @@ int main(int argc, char* argv[]) {
         }
         ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVelocity, 1.3 * maxVelocity);
         ImPlot::PlotLine("Elbow Velocity", timestamp, velocityT, trajectory.states_size());
+        ImPlot::PlotLine("Velocity Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
     }
