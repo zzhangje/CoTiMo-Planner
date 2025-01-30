@@ -1,0 +1,24 @@
+{
+  "name": "cyber-planner",
+  "version": "0.1.0",
+  "builtin-baseline": "4eeb300260f6c8773f6c0827cb9409b9181e120e",
+  "dependencies": [
+    "fmt",
+    "eigen3",
+    "protobuf",
+    "grpc",
+    "glfw3",
+    "gl3w",
+    "opengl",
+    {
+      "name": "imgui",
+      "features": [
+        "freetype-lunasvg",
+        "docking-experimental",
+        "glfw-binding",
+        "opengl3-binding"
+      ]
+    },
+    "implot"
+  ]
+}

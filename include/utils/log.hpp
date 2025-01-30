@@ -5,17 +5,34 @@
  * under the terms of the MIT license. See `log.c` for details.
  */
 
-#ifndef LOG_H
-#define LOG_H
+#ifndef LOG_HPP
+#define LOG_HPP
 
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <time.h>
+#include <cstdarg>
+#include <cstdio>
+#include <ctime>
+#include <cstdlib>
+#include <iostream>
 
 #define LOG_VERSION "0.1.0"
 #define MAX_CALLBACKS 32
 #define LOG_USE_COLOR
+
+#ifdef _WIN32
+#include <windows.h>
+void showConsole() {
+  DWORD processId = GetCurrentProcessId();
+  HWND hwnd = GetConsoleWindow();
+  if (!hwnd) {
+    AllocConsole();
+    hwnd = GetConsoleWindow();
+  }
+  ShowWindow(hwnd, SW_SHOW);
+}
+#else
+void showConsole() {
+}
+#endif
 
 typedef struct {
   va_list ap;
@@ -44,19 +61,14 @@ static struct {
   Callback callbacks[MAX_CALLBACKS];
 } L;
 
-enum { LOG_TRACE,
-       LOG_DEBUG,
-       LOG_INFO,
-       LOG_WARN,
-       LOG_ERROR,
-       LOG_FATAL };
+enum { LOG_TRACE, LOG_DEBUG, LOG_INFO, LOG_WARN, LOG_ERROR, LOG_FATAL };
 
-static const char *level_strings[] = {
-    "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
+static const char *level_strings[] = {"TRACE", "DEBUG", "INFO",
+                                      "WARN",  "ERROR", "FATAL"};
 
 #ifdef LOG_USE_COLOR
-static const char *level_colors[] = {
-    "\x1b[94m", "\x1b[36m", "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[35m"};
+static const char *level_colors[] = {"\x1b[94m", "\x1b[36m", "\x1b[32m",
+                                     "\x1b[33m", "\x1b[31m", "\x1b[35m"};
 #endif
 
 #define log_trace(...) log_log(LOG_TRACE, __FILE__, __LINE__, __VA_ARGS__)
@@ -70,14 +82,12 @@ static void stdout_callback(log_Event *ev) {
   char buf[16];
   buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
 #ifdef LOG_USE_COLOR
-  fprintf(
-      (FILE *)ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
-      buf, level_colors[ev->level], level_strings[ev->level],
-      ev->file, ev->line);
+  fprintf((FILE *)ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", buf,
+          level_colors[ev->level], level_strings[ev->level], ev->file,
+          ev->line);
 #else
-  fprintf(
-      (FILE *)ev->udata, "%s %-5s %s:%d: ",
-      buf, level_strings[ev->level], ev->file, ev->line);
+  fprintf((FILE *)ev->udata, "%s %-5s %s:%d: ", buf, level_strings[ev->level],
+          ev->file, ev->line);
 #endif
   vfprintf((FILE *)ev->udata, ev->fmt, ev->ap);
   fprintf((FILE *)ev->udata, "\n");
@@ -87,9 +97,8 @@ static void stdout_callback(log_Event *ev) {
 static void file_callback(log_Event *ev) {
   char buf[64];
   buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ev->time)] = '\0';
-  fprintf(
-      (FILE *)ev->udata, "%s %-5s %s:%d: ",
-      buf, level_strings[ev->level], ev->file, ev->line);
+  fprintf((FILE *)ev->udata, "%s %-5s %s:%d: ", buf, level_strings[ev->level],
+          ev->file, ev->line);
   vfprintf((FILE *)ev->udata, ev->fmt, ev->ap);
   fprintf((FILE *)ev->udata, "\n");
   fflush((FILE *)ev->udata);
@@ -107,27 +116,25 @@ static void unlock(void) {
   }
 }
 
-const char *log_level_string(int level) {
-  return level_strings[level];
-}
+const char *log_level_string(int level) { return level_strings[level]; }
 
 void log_set_lock(log_LockFn fn, void *udata) {
   L.lock = fn;
   L.udata = udata;
 }
 
-void log_set_level(int level) {
-  L.level = level;
-}
+void log_set_level(int level) { L.level = level; }
 
-void log_set_quiet(bool enable) {
-  L.quiet = enable;
-}
+void log_set_quiet(bool enable) { L.quiet = enable; }
 
 int log_add_callback(log_LogFn fn, void *udata, int level) {
   for (int i = 0; i < MAX_CALLBACKS; i++) {
     if (!L.callbacks[i].fn) {
-      L.callbacks[i] = (Callback){fn, udata, level};
+      Callback cb;
+      cb.fn = fn;
+      cb.udata = udata;
+      cb.level = level;
+      L.callbacks[i] = cb;
       return 0;
     }
   }
@@ -147,12 +154,12 @@ static void init_event(log_Event *ev, void *udata) {
 }
 
 void log_log(int level, const char *file, int line, const char *fmt, ...) {
-  log_Event ev = {
-      .fmt = fmt,
-      .file = file,
-      .line = line,
-      .level = level,
-  };
+  log_Event ev;
+  ev.fmt = fmt;
+  ev.file = file;
+  ev.line = line;
+  ev.level = level;
+  ev.time = nullptr;
 
   lock();
 

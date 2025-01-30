@@ -1,1 +1,6 @@
 build/*
+out/*
+vcpkg
+vcpkg_installed
+build-windows
+build-linux
