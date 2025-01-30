@@ -17,7 +17,10 @@
 #define BETA 1e3
 #define GAMMA .2
 #define RHO 1
-#define PENALTY 1e2
+#define SOC_COEFF 1
+#define LINEAR_EQ_COEFF 1
+#define LINEAR_INEQ_COEFF 1
+#define QUAD_EQ_COEFF 1
 #define ARC_LEN 1.
 
 using namespace com::nextinnovation::armtrajectoryservice;
@@ -488,26 +491,26 @@ class Topp {
 
     // linear equality constraints
     Eigen::VectorXd resEq = topp->G * optX - topp->h + topp->lambda / topp->rho;
-    res += topp->rho / 2 * resEq.squaredNorm() * PENALTY;
-    optG += topp->rho * topp->G.transpose() * resEq * PENALTY;
+    res += topp->rho / 2 * resEq.squaredNorm() * LINEAR_EQ_COEFF;
+    optG += topp->rho * topp->G.transpose() * resEq * LINEAR_EQ_COEFF;
 
     // linear inequality constraints
     Eigen::VectorXd resIneq = max(topp->P * optX - topp->q + topp->eta / topp->rho, 0);
-    res += topp->rho / 2 * resIneq.squaredNorm();
-    optG += topp->rho * topp->P.transpose() * resIneq;
+    res += topp->rho / 2 * resIneq.squaredNorm() * LINEAR_INEQ_COEFF;
+    optG += topp->rho * topp->P.transpose() * resIneq * LINEAR_INEQ_COEFF;
 
     // second order cone constraints
     for (int i = 0; i < topp->n_soc; ++i) {
       Eigen::VectorXd resSoc = socProjection(topp->mus[i] / topp->rho - topp->As[i] * optX - topp->bs[i]);
-      res += topp->rho / 2 * resSoc.squaredNorm() * PENALTY;
-      optG -= topp->rho * topp->As[i].transpose() * resSoc * PENALTY;
+      res += topp->rho / 2 * resSoc.squaredNorm() * SOC_COEFF;
+      optG -= topp->rho * topp->As[i].transpose() * resSoc * SOC_COEFF;
     }
 
     // quadratic equality constraints
     for (int i = 0; i < topp->n_quadeq; ++i) {
       double resQuadeq = (optX.transpose() * topp->Js[i]).dot(optX) - topp->rs[i].dot(optX) + topp->nus[i] / topp->rho;
-      res += topp->rho / 2 * resQuadeq * resQuadeq * PENALTY;
-      optG += topp->rho * resQuadeq * (2 * topp->Js[i] * optX - topp->rs[i]) * PENALTY;
+      res += topp->rho / 2 * resQuadeq * resQuadeq * QUAD_EQ_COEFF;
+      optG += topp->rho * resQuadeq * (2 * topp->Js[i] * optX - topp->rs[i]) * QUAD_EQ_COEFF;
     }
 
     return res;

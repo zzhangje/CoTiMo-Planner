@@ -68,17 +68,17 @@ class Smooth {
     // }
 
     // distance potential field
-    for (int i = 0; i < smooth->n - 1; ++i) {
-      double d = pow(optX(i) - optX(i + 1), 2);
-      optG(i) += 2 * d;
-      optG(i + 1) += -2 * d;
-      res += d;
+    // for (int i = 0; i < smooth->n - 1; ++i) {
+    //   double d = pow(optX(i) - optX(i + 1), 2);
+    //   optG(i) += 2 * d;
+    //   optG(i + 1) += -2 * d;
+    //   res += d;
 
-      d = pow(optX(i + smooth->n) - optX(i + smooth->n + 1), 2);
-      optG(i + smooth->n) += 2 * d;
-      optG(i + smooth->n + 1) += -2 * d;
-      res += d;
-    }
+    //   d = pow(optX(i + smooth->n) - optX(i + smooth->n + 1), 2);
+    //   optG(i + smooth->n) += 2 * d;
+    //   optG(i + smooth->n + 1) += -2 * d;
+    //   res += d;
+    // }
 
     // smoothness potential field
     for (int i = 1; i < smooth->n - 1; ++i) {
@@ -96,11 +96,11 @@ class Smooth {
     }
 
     // penalty potential field
-    for (int i = 1; i < smooth->n - 1; ++i) {
-      res += .5 * (pow(optX(i) - smooth->x0(i), 2) + pow(optX(i + smooth->n) - smooth->x0(i + smooth->n), 2));
-      optG(i) += (optX(i) - smooth->x0(i));
-      optG(i + smooth->n) += (optX(i + smooth->n) - smooth->x0(i + smooth->n));
-    }
+    // for (int i = 1; i < smooth->n - 1; ++i) {
+    //   res += .5 * (pow(optX(i) - smooth->x0(i), 2) + pow(optX(i + smooth->n) - smooth->x0(i + smooth->n), 2));
+    //   optG(i) += (optX(i) - smooth->x0(i));
+    //   optG(i + smooth->n) += (optX(i + smooth->n) - smooth->x0(i + smooth->n));
+    // }
 
     optG(0) = 0;
     optG(smooth->n - 1) = 0;
@@ -144,7 +144,7 @@ class Smooth {
       int ret = lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
       if (ret < 0) {
         log_error("L-BFGS optimization failed with code %d.", ret);
-        break;
+        // break;
       }
 
       now = std::chrono::steady_clock::now();
