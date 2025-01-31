@@ -30,6 +30,11 @@ class Smooth {
     this->convertToVariables();
     this->x0 = x;
 
+    this->params = lbfgs::lbfgs_parameter_t();
+    // this->params.g_epsilon = 1.0e-8;
+    // this->params.past = 3;
+    // this->params.delta = 1.0e-8;
+
     this->solve(maxIter);
   }
 
@@ -50,7 +55,7 @@ class Smooth {
     double res = 0;
     optG = Eigen::VectorXd::Zero(optX.size());
 
-    // distance potential field
+    // gravity potential field
     // for (int i = 1; i < smooth->n - 1; ++i) {
     //   double d = smooth->env.distanceToObject(
     //       smooth->arm.armTransform(optX(i), optX(i + smooth->n)));
@@ -62,19 +67,20 @@ class Smooth {
     //   optG(i + smooth->n) += -exp(-d) * (smooth->env.distanceToObject(smooth->arm.armTransform(optX(i), optX(i + smooth->n) + GRAD_GAP)) - d) / GRAD_GAP;
     // }
 
+    // distance potential field
+    // for (int i = 0; i < smooth->n - 1; ++i) {
+    //   double d = pow(optX(i) - optX(i + 1), 2);
+    //   optG(i) += 2 * d;
+    //   optG(i + 1) += -2 * d;
+    //   res += d;
+
+    //   d = pow(optX(i + smooth->n) - optX(i + smooth->n + 1), 2);
+    //   optG(i + smooth->n) += 2 * d;
+    //   optG(i + smooth->n + 1) += -2 * d;
+    //   res += d;
+    // }
+
     // smoothness potential field
-    for (int i = 0; i < smooth->n - 1; ++i) {
-      double d = pow(optX(i) - optX(i + 1), 2);
-      optG(i) += 2 * d;
-      optG(i + 1) += -2 * d;
-      res += d;
-
-      d = pow(optX(i + smooth->n) - optX(i + smooth->n + 1), 2);
-      optG(i + smooth->n) += 2 * d;
-      optG(i + smooth->n + 1) += -2 * d;
-      res += d;
-    }
-
     for (int i = 1; i < smooth->n - 1; ++i) {
       double d = pow(optX(i - 1) - 2 * optX(i) + optX(i + 1), 2);
       optG(i - 1) += 2 * d;
@@ -90,11 +96,11 @@ class Smooth {
     }
 
     // penalty potential field
-    for (int i = 1; i < smooth->n - 1; ++i) {
-      res += .5 * (pow(optX(i) - smooth->x0(i), 2) + pow(optX(i + smooth->n) - smooth->x0(i + smooth->n), 2));
-      optG(i) += (optX(i) - smooth->x0(i));
-      optG(i + smooth->n) += (optX(i + smooth->n) - smooth->x0(i + smooth->n));
-    }
+    // for (int i = 1; i < smooth->n - 1; ++i) {
+    //   res += .5 * (pow(optX(i) - smooth->x0(i), 2) + pow(optX(i + smooth->n) - smooth->x0(i + smooth->n), 2));
+    //   optG(i) += (optX(i) - smooth->x0(i));
+    //   optG(i + smooth->n) += (optX(i + smooth->n) - smooth->x0(i + smooth->n));
+    // }
 
     optG(0) = 0;
     optG(smooth->n - 1) = 0;
@@ -138,7 +144,7 @@ class Smooth {
       int ret = lbfgs::lbfgs_optimize(x, cost, loss, NULL, NULL, this, params);
       if (ret < 0) {
         log_error("L-BFGS optimization failed with code %d.", ret);
-        break;
+        // break;
       }
 
       now = std::chrono::steady_clock::now();

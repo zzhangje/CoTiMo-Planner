@@ -205,7 +205,7 @@ class Service final : public ArmTrajectoryService::Service {
       }
     }
     log_info("Found a path with %d points.", gridPath.size());
-    nextinnovation::samplePath(gridPath, sampledPath, 5);
+    nextinnovation::samplePath(gridPath, sampledPath, 15);
     std::vector<Eigen::Vector2d> path = nextinnovation::getTRs(sampledPath);
 
     // optimize the path
@@ -268,7 +268,7 @@ void RunGrpcServer() {
 
 int main(int argc, char* argv[]) {
   // free console
-  // CompatibleFreeConsole();
+  CompatibleFreeConsole();
 
   log_set_quiet(false);
 
@@ -463,7 +463,7 @@ int main(int argc, char* argv[]) {
      * Window 2: Configuration Space
      */
     ImGui::Begin("Arm Trajectory", nullptr, WINDOW_FLAGS);
-    if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (rad)", ImVec2(-1, 400))) {
+    if (ImPlot::BeginPlot("Configuration Space", "Shoulder Height (m)", "Elbow Position (rad)", ImVec2(-1, 400), ImPlotFlags_NoLegend)) {
       ImPlot::SetupAxisLimits(ImAxis_X1, ELEVATOR_MIN_POSITION_METER, ELEVATOR_MAX_POSITION_METER);
       ImPlot::SetupAxisLimits(ImAxis_Y1, ARM_MIN_THETA_RADIAN, ARM_MAX_THETA_RADIAN);
 
@@ -484,14 +484,6 @@ int main(int argc, char* argv[]) {
       ImPlot::PlotScatter("obstacle", obsX.data(), obsY.data(), obsX.size());
       ImPlot::PlotScatter("expanded", expX.data(), expY.data(), expX.size());
 
-      double* trajX = new double[path.size()];
-      double* trajY = new double[path.size()];
-      for (int i = 0; i < path.size(); ++i) {
-        trajX[i] = path[i](0);
-        trajY[i] = path[i](1);
-      }
-      ImPlot::PlotLine("trajectory", trajX, trajY, path.size());
-
       double* astarX = new double[astarPath.size()];
       double* astarY = new double[astarPath.size()];
       for (int i = 0; i < astarPath.size(); ++i) {
@@ -499,6 +491,14 @@ int main(int argc, char* argv[]) {
         astarY[i] = astarPath[i](1);
       }
       ImPlot::PlotLine("astar", astarX, astarY, astarPath.size());
+
+      double* trajX = new double[path.size()];
+      double* trajY = new double[path.size()];
+      for (int i = 0; i < path.size(); ++i) {
+        trajX[i] = path[i](0);
+        trajY[i] = path[i](1);
+      }
+      ImPlot::PlotLine("trajectory", trajX, trajY, path.size());
 
       double currentX[] = {simT};
       double currentY[] = {simR};
@@ -511,20 +511,35 @@ int main(int argc, char* argv[]) {
      * Window 3: Trajectory Params
      */
     ImGui::Begin("Trajectory Params");
+    ImVec2 available = ImGui::GetContentRegionAvail();
+    float plotHeight = available.y * .25f;
     if (velocity.size() > 0 && trajectory.states_size() > 0 && voltage.size() > 0) {
       std::vector<double> simX = {simTime, simTime};
       std::vector<double> simY = {-0x3f3f3f3f, 0x3f3f3f3f};
-      if (ImPlot::BeginPlot("Current")) {
+      if (ImPlot::BeginPlot("Current", ImVec2(-1, plotHeight), ImPlotFlags_NoLegend)) {
         ImPlot::SetupAxes("Time (s)", "Current (A)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_I_MAX, 1.3 * ARM_I_MAX);
         double* elbowCurrentT = new double[trajectory.states_size()];
         double* shoulderCurrentT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
+        double maxCurrent = .1, minCurrent = -.1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           timestamp[i] = trajectory.states(i).timestamp();
           shoulderCurrentT[i] = trajectory.states(i).current().shouldercurrentampere();
           elbowCurrentT[i] = trajectory.states(i).current().elbowcurrentampere();
+          if (shoulderCurrentT[i] > maxCurrent) {
+            maxCurrent = shoulderCurrentT[i];
+          }
+          if (shoulderCurrentT[i] < minCurrent) {
+            minCurrent = shoulderCurrentT[i];
+          }
+          if (elbowCurrentT[i] > maxCurrent) {
+            maxCurrent = elbowCurrentT[i];
+          }
+          if (elbowCurrentT[i] < minCurrent) {
+            minCurrent = elbowCurrentT[i];
+          }
         }
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minCurrent, 1.3 * maxCurrent);
         ImPlot::PlotLine("Shoulder Current", timestamp, shoulderCurrentT, trajectory.states_size());
         ImPlot::PlotLine("Elbow Current", timestamp, elbowCurrentT, trajectory.states_size());
         std::vector<double> vmaxX = {0, timestamp[trajectory.states_size() - 1]};
@@ -535,17 +550,30 @@ int main(int argc, char* argv[]) {
         ImPlot::PlotLine("Current Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
-      if (ImPlot::BeginPlot("Voltage")) {
+      if (ImPlot::BeginPlot("Voltage", ImVec2(-1, plotHeight), ImPlotFlags_NoLegend)) {
         ImPlot::SetupAxes("Time (s)", "Voltage (V)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -1.3 * ARM_V_MAX, 1.3 * ARM_V_MAX);
         double* elbowVoltageT = new double[trajectory.states_size()];
         double* shoulderVoltageT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
+        double maxVoltage = .1, minVoltage = -.1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           timestamp[i] = trajectory.states(i).timestamp();
           shoulderVoltageT[i] = voltage[i].x();
           elbowVoltageT[i] = voltage[i].y();
+          if (voltage[i].x() > maxVoltage) {
+            maxVoltage = voltage[i].x();
+          }
+          if (voltage[i].x() < minVoltage) {
+            minVoltage = voltage[i].x();
+          }
+          if (voltage[i].y() > maxVoltage) {
+            maxVoltage = voltage[i].y();
+          }
+          if (voltage[i].y() < minVoltage) {
+            minVoltage = voltage[i].y();
+          }
         }
+        ImPlot::SetupAxisLimits(ImAxis_Y1, 1.3 * minVoltage, 1.3 * maxVoltage);
         ImPlot::PlotLine("Shoulder Voltage", timestamp, shoulderVoltageT, trajectory.states_size());
         ImPlot::PlotLine("Elbow Voltage", timestamp, elbowVoltageT, trajectory.states_size());
         std::vector<double> vmaxX = {0, timestamp[trajectory.states_size() - 1]};
@@ -556,11 +584,11 @@ int main(int argc, char* argv[]) {
         ImPlot::PlotLine("Voltage Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
-      if (ImPlot::BeginPlot("Shoulder Velocity")) {
+      if (ImPlot::BeginPlot("Shoulder Velocity", ImVec2(-1, plotHeight), ImPlotFlags_NoLegend)) {
         ImPlot::SetupAxes("Time (s)", "Velocity (m/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         double* velocityT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
-        double maxVelocity = 1, minVelocity = -1;
+        double maxVelocity = .1, minVelocity = -.1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           velocityT[i] = velocity[i].x();
           if (velocity[i].x() > maxVelocity) {
@@ -576,11 +604,11 @@ int main(int argc, char* argv[]) {
         ImPlot::PlotLine("Velocity Time", simX.data(), simY.data(), 2);
         ImPlot::EndPlot();
       }
-      if (ImPlot::BeginPlot("Elbow Velocity")) {
+      if (ImPlot::BeginPlot("Elbow Velocity", ImVec2(-1, plotHeight), ImPlotFlags_NoLegend)) {
         ImPlot::SetupAxes("Time (s)", "Velocity (rad/s)", ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_None);
         double* velocityT = new double[trajectory.states_size()];
         double* timestamp = new double[trajectory.states_size()];
-        double maxVelocity = 1, minVelocity = -1;
+        double maxVelocity = .1, minVelocity = -.1;
         for (int i = 0; i < trajectory.states_size(); ++i) {
           velocityT[i] = velocity[i].y();
           if (velocity[i].y() > maxVelocity) {
@@ -603,7 +631,7 @@ int main(int argc, char* argv[]) {
      * Window 4: 2D Projection
      */
     ImGui::Begin("2D Projection", nullptr, WINDOW_FLAGS);
-    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)", ImVec2(-1, 400), ImPlotFlags_Equal)) {
+    if (ImPlot::BeginPlot("2D Projection", "X (m)", "Z (m)", ImVec2(-1, 400), ImPlotFlags_Equal | ImPlotFlags_NoLegend)) {
       nextinnovation::Object env = nextinnovation::Object(nextinnovation::ObjectType::ENV);
       nextinnovation::Object arm = nextinnovation::Object(armType).armTransform(simT, simR);
       nextinnovation::Object exp = nextinnovation::Object(expType).armTransform(simT, simR);

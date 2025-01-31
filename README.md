@@ -8,7 +8,34 @@ Team 8214's 2025 FRC season code for superstructure motion planning, written in 
 
 ## Environment
 
+- C++17 or higher
+- CMake 3.15 or higher
+
 ## Quick Start
+
+### Linux / macOS
+
+```bash
+bash scripts/build.sh
+
+./build/server
+```
+
+```bash
+./build/client
+```
+
+### Windows
+
+```bash
+.\scripts\build.ps.1
+
+.\build\Release\server.exe
+```
+
+```bash
+.\build\Release\client.exe
+```
 
 ## See Also
 
