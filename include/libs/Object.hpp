@@ -67,15 +67,15 @@ class Object {
       }
       case ObjectType::ARM: {
         this->polygons = std::vector<nextinnovation::Polygon>{
-            nextinnovation::Polygon({Eigen::Vector2d(-.2, .05), Eigen::Vector2d(.2, .05),
-                                     Eigen::Vector2d(.2, -.05), Eigen::Vector2d(-.2, -.05)},
+            nextinnovation::Polygon({Eigen::Vector2d(-.2, .05), Eigen::Vector2d(.25, .1),
+                                     Eigen::Vector2d(.25, -.1), Eigen::Vector2d(-.2, -.05)},
                                     false)};
         break;
       }
       case ObjectType::ARM_EXP: {
         this->polygons = std::vector<nextinnovation::Polygon>{
-            nextinnovation::Polygon({Eigen::Vector2d(-.25, .1), Eigen::Vector2d(.25, .1),
-                                     Eigen::Vector2d(.25, -.1), Eigen::Vector2d(-.25, -.1)},
+            nextinnovation::Polygon({Eigen::Vector2d(-.25, .1), Eigen::Vector2d(.3, .15),
+                                     Eigen::Vector2d(.3, -.15), Eigen::Vector2d(-.25, -.1)},
                                     false)};
         break;
       }

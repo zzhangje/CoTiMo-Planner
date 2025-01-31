@@ -268,7 +268,7 @@ void RunGrpcServer() {
 
 int main(int argc, char* argv[]) {
   // free console
-  // CompatibleFreeConsole();
+  CompatibleFreeConsole();
 
   log_set_quiet(false);
 

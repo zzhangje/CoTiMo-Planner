@@ -58,9 +58,11 @@ constexpr double ELEVATOR_COS_ANGLE =
     constexprCos(toRadians(ELEVATOR_2_GROUND_ANGLE));
 
 // the properties of the Kraken FOC
-constexpr double KRAKEN_FOC_R = 0.0248447204968944;
-constexpr double KRAKEN_FOC_Kv = 0.0020603983722425;
-constexpr double KRAKEN_FOC_Ka = 0.002;
+// constexpr double KRAKEN_FOC_R = 0.0248447204968944;
+// constexpr double KRAKEN_FOC_Kv = 0.0020603983722425;
+constexpr double KRAKEN_FOC_R = 0.0968239879878;
+constexpr double KRAKEN_FOC_Kv = 0.20603983722425;
+constexpr double KRAKEN_FOC_Ka = 0.0298727648736;
 
 // the properties of the elevator
 const double ELEVATOR_MIN_POSITION_METER = 0;
@@ -68,8 +70,8 @@ const double ELEVATOR_MAX_POSITION_METER = 2.0;
 constexpr double ELEVATOR_METER_2_MOTOR_RADIAN = 10;
 const double ELEVATOR_V_MAX = 12;
 const double ELEVATOR_I_MAX = 25;
-const double ELEVATOR_Kg = .2;
-const double ELEVATOR_Ks = .05;
+const double ELEVATOR_Kg = 2.;
+const double ELEVATOR_Ks = .5;
 constexpr double ELEVATOR_Kv = KRAKEN_FOC_Kv * ELEVATOR_METER_2_MOTOR_RADIAN;
 constexpr double ELEVATOR_Ka = KRAKEN_FOC_Ka * ELEVATOR_METER_2_MOTOR_RADIAN;
 constexpr double ELEVATOR_R = KRAKEN_FOC_R;
@@ -82,8 +84,8 @@ constexpr double ARM_MAX_THETA_RADIAN = toRadians(ARM_MAX_THETA_DEGREE);
 constexpr double ARM_RADIAN_2_MOTOR_RADIAN = 10;
 const double ARM_V_MAX = 12;
 const double ARM_I_MAX = 25;
-const double ARM_Kg = .5;
-const double ARM_Ks = .1;
+const double ARM_Kg = 2.;
+const double ARM_Ks = .5;
 constexpr double ARM_Kv = KRAKEN_FOC_Kv * ARM_RADIAN_2_MOTOR_RADIAN;
 constexpr double ARM_Ka = KRAKEN_FOC_Ka * ARM_RADIAN_2_MOTOR_RADIAN;
 constexpr double ARM_R = KRAKEN_FOC_R;

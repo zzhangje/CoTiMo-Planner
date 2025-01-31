@@ -10,36 +10,32 @@ Team 8214's 2025 FRC season code for superstructure motion planning, written in 
 
 - C++17 or higher
 - CMake 3.15 or higher
-- vcpkg package manager
 
 ## Quick Start
 
-1. Install vcpkg if you haven't:
-    ```bash
-    git clone https://github.com/Microsoft/vcpkg.git
-    cd vcpkg
-    ./bootstrap-vcpkg.sh  # Linux/macOS
-    # OR
-    .\bootstrap-vcpkg.bat  # Windows
-    ```
+### Linux / macOS
 
-2. Set VCPKG_ROOT environment variable:
-    ```bash
-    # Linux/macOS
-    export VCPKG_ROOT=/path/to/vcpkg
+```bash
+bash scripts/build.sh
 
-    # Windows (PowerShell)
-    $env:VCPKG_ROOT = "C:\path\to\vcpkg"
-    ```
+./build/server
+```
 
-3. Build the project:
-    ```bash
-    # Linux/macOS
-    bash scripts/build.sh
+```bash
+./build/client
+```
 
-    # Windows
-    .\scripts\build.ps.1
-    ```
+### Windows
+
+```bash
+.\scripts\build.ps.1
+
+.\build\Release\server.exe
+```
+
+```bash
+.\build\Release\client.exe
+```
 
 ## See Also
 
