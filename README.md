@@ -2,7 +2,7 @@
 
 [![Next-Innovation](https://img.shields.io/badge/Next-Innovation-blueviolet?style=flat)](https://github.com/FRCNextInnovation) [![Lang](https://img.shields.io/badge/Lang-en--US-Green?style=flat)]()
 
-Team 8214's 2025 FRC season code for superstructure motion planning, written in CPP and Eigen Lib. See our math work and code report [here](./report/report.pdf).
+Team 8214's 2025 FRC season code for superstructure motion planning, written in CPP and Eigen Lib. See our math work and code report [here](./report.pdf).
 
 <img src="./assets/next-innovation.png" style="zoom:50%;" >
 
