@@ -1,17 +1,21 @@
 # Cyber Planner 2025
 
-[![Next-Innovation](https://img.shields.io/badge/Next-Innovation-blueviolet?style=flat)](https://github.com/FRCNextInnovation) [![Lang](https://img.shields.io/badge/Lang-en--US-Green?style=flat)]()
-
 Team 8214's 2025 FRC season code for superstructure motion planning, written in CPP and Eigen Lib. See our math work and code report [here](./report.pdf).
 
-<img src="./assets/next-innovation.png" style="zoom:50%;" >
+![](./assets/next-innovation.png)
 
-## Environment
+[![Next-Innovation](https://img.shields.io/badge/Next-Innovation-blueviolet?style=flat)](https://github.com/FRCNextInnovation) [![Lang](https://img.shields.io/badge/Lang-en--US-Green?style=flat)]()
+
+The algorithm is based on a finite convex polygon set representation of objects, where path planning is built upon a Lipschitz continuous artificial potential field. In trajectory planning, constraints on current and voltage are incorporated, and time-optimal trajectories are derived using the Augmented Lagrangian method and the L-BFGS optimization algorithm.
+
+![](./assets/trajectory.png)
+
+## Quick Start
+
+### Environment Setup
 
 - C++17 or higher
 - CMake 3.15 or higher
-
-## Quick Start
 
 ### Linux / macOS
 
